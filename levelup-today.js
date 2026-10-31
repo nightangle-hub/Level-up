@@ -19,27 +19,41 @@ function trainingInfo(state,t){
   const movedToday=logs.some(e=>(e.kind==='session'||e.kind==='cardio')&&e.date===t);
   return {next:SESSIONS[next],movedToday}}
 function mealInfo(state,t){const m=((state&&state.cookedMeals)||[]).filter(x=>x&&x.date===t).pop();return {cooked:m?m.recipeTitle:''}}
+const RANKS=[[18,'S'],[12,'A'],[8,'B'],[5,'C'],[3,'D'],[1,'E']];
+function rankFor(level){for(const [min,r] of RANKS)if(level>=min)return r;return 'E'}
+function planInfo(t){const P=window.LevelUpPlan;if(!P)return {week:0,tonight:null};return {week:P.count(P.monday(t)),tonight:P.dinnerFor(t)}}
 function bar(have,target){let h='';for(let i=0;i<target;i++)h+='<i class="lut-dot'+(i<have?' on':'')+'"></i>';return h}
 function html(){
   const M=window.LevelUpMissions;if(!M)return '';
   const state=read('bloom-zen-v1')||{},t=today(),st=M.status(state);
-  const look=lookInfo(t),train=trainingInfo(state,t),meal=mealInfo(state,t);
-  const rows=st.rows.map(r=>'<li class="lut-row'+(r.done?' done':'')+'"><span class="lut-name"><b>'+esc(r.label)+'</b><small>'+esc(r.detail)+'</small></span><span class="lut-prog">'+(r.id==='clear'?'':bar(Math.min(r.have,r.target),r.target))+'</span><span class="lut-xp">'+(r.done?'Done':'+'+r.xp+' XP')+'</span></li>').join('');
+  const look=lookInfo(t),train=trainingInfo(state,t),meal=mealInfo(state,t),plan=planInfo(t);
+  let xp={level:1,total:0};try{xp=window.BloomCore.trainingXP(state)}catch(e){}
+  const cleared=st.rows.filter(r=>r.done&&r.id!=='clear').map(r=>r.label),gate=st.rows.find(r=>r.id==='clear').done;
+  const rows=st.rows.map(r=>'<li class="lut-row'+(r.done?' done':'')+'"><span class="lut-name"><b>'+esc(r.id==='clear'?'Gate cleared':r.label)+'</b><small>'+esc(r.detail)+'</small></span><span class="lut-prog">'+(r.id==='clear'?'':bar(Math.min(r.have,r.target),r.target))+'</span><span class="lut-xp">'+(r.done?'Done':'+'+r.xp+' XP')+'</span></li>').join('');
   const btn=(label,view)=>'<button type="button" class="lut-go" data-action="open" data-view="'+view+'">'+esc(label)+'</button>';
+  const planBtn=label=>'<button type="button" class="lut-go" data-plan-open="0">'+esc(label)+'</button>';
   const item=(k,title,detail,ok,go)=>'<li class="lut-item'+(ok?' done':'')+'"><span class="lut-k">'+k+'</span><span class="lut-t"><b>'+esc(title)+'</b><small>'+esc(detail)+'</small></span>'+go+'</li>';
+  let dinner;
+  if(meal.cooked)dinner=item('Dinner','Cooked: '+meal.cooked,'Counts toward Cook.',true,btn('Meals','dinner'));
+  else if(plan.tonight)dinner=item('Dinner','Tonight: '+plan.tonight.title,'Planned. Cook it and mark it cooked.',false,btn('Open recipe','user-recipe-'+plan.tonight.id));
+  else if(plan.week)dinner=item('Dinner','Nothing planned tonight','Cook 2 meals this week for the bonus.',false,btn('Meals','dinner'));
+  else dinner=item('Dinner','Plan the week','Pick up to 5 dinners and shop once.',false,planBtn('Plan'));
   return '<section id="luToday" class="lut"><style>'+
   '#luToday{margin:18px 0}#luToday h2{font:400 22px/1.2 Georgia,serif;margin:0 0 4px}#luToday .micro{margin:0 0 8px}#luToday .lut-card{border:1px solid var(--border);background:var(--card);border-radius:18px;padding:18px 18px 10px;margin:0 0 14px}#luToday ul{list-style:none;margin:0;padding:0}'+
   '#luToday li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}#luToday li:first-child{border-top:0}#luToday .lut-name,#luToday .lut-t{flex:1;min-width:0;display:flex;flex-direction:column}#luToday small{color:var(--muted);font-size:12px;line-height:1.35}'+
   '#luToday .lut-prog{display:flex;gap:4px}#luToday .lut-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--accent);display:block}#luToday .lut-dot.on{background:var(--accent)}#luToday .lut-xp{font-size:12px;color:var(--muted);min-width:52px;text-align:right}#luToday .done .lut-xp{color:var(--accent)}'+
   '#luToday .lut-k{font-size:10px;letter-spacing:1px;color:var(--muted);width:58px;text-transform:uppercase}#luToday .lut-go{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}#luToday .done .lut-t b::after{content:" \\2713";color:var(--accent)}'+
+  '#luToday .lut-rank{display:flex;align-items:center;gap:10px;margin:2px 0 10px}#luToday .lut-badge{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font:400 20px Georgia,serif;color:var(--accent)}#luToday .lut-sys{margin:0 0 6px;font-size:12px;color:var(--accent);letter-spacing:.3px}'+
   '</style>'+
-  '<div class="lut-card"><p class="micro">THIS WEEK · MISSIONS</p><h2>Four small wins</h2><ul>'+rows+'</ul>'+
+  '<div class="lut-card"><p class="micro">THE SYSTEM · WEEKLY QUESTS</p><div class="lut-rank"><span class="lut-badge" aria-label="Rank '+rankFor(xp.level)+'">'+rankFor(xp.level)+'</span><div><h2>Four quests this week</h2><small>Rank '+rankFor(xp.level)+' · Level '+xp.level+' · resets Monday, no penalties</small></div></div>'+
+  (gate?'<p class="lut-sys">[System] Gate cleared. All quests complete.</p>':cleared.length?'<p class="lut-sys">[System] Quest cleared: '+esc(cleared.join(', '))+'.</p>':'')+
+  '<ul>'+rows+'</ul>'+
   '<ul><li class="lut-row'+(st.photoDone?' done':'')+'"><span class="lut-name"><b>Monthly photo check</b><small>Save this month\'s baseline photo in Appearance</small></span><span class="lut-xp">'+(st.photoDone?'Done':'+10 XP')+'</span></li></ul></div>'+
   '<div class="lut-card"><p class="micro">TODAY</p><ul>'+
   item('Move',train.movedToday?'Logged today':'Next: '+train.next,train.movedToday?'Nice, that counts toward Move.':'Your next session in the rotation.',train.movedToday,btn('Open','training'))+
   item('Look',look.name,look.done?'Done for today. Looks earn no XP.':'Your current look. Optional, no XP.',look.done,btn('Open','beauty'))+
-  item('Dinner',meal.cooked?'Cooked: '+meal.cooked:'Pick tonight\'s dinner',meal.cooked?'Counts toward Cook.':'Cook 2 meals this week for the bonus.',!!meal.cooked,btn('Meals','dinner'))+
-  item('Plan','Shopping and stock','Confirm a plan or update stock once this week.',st.week.done.plan,btn('Open','groceries'))+
+  dinner+
+  item('Plan',plan.week?plan.week+' of '+(window.LevelUpPlan?window.LevelUpPlan.MAX:5)+' dinners planned':'No plan yet this week',plan.week>=3?'Plan quest cleared. Edit or shop anytime.':'Plan 3 or more dinners to clear the quest.',plan.week>=3,planBtn(plan.week?'Edit':'Plan'))+
   '</ul></div></section>'}
 function inject(){
   const c=document.getElementById('content');if(!c)return;
