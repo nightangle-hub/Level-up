@@ -438,9 +438,8 @@
 #luApp .frames.c4{grid-template-columns:1fr 1fr}
 #luApp .frame figcaption{font-size:11px;line-height:1.3;color:var(--text);margin-top:5px}
 #luApp .frame{margin:0}
-#luApp .frame .ph{aspect-ratio:auto}
-#luApp .frame .ph img{height:auto;object-fit:contain}
-#luApp .frame .ph.miss{min-height:120px}
+#luApp .frame .ph{aspect-ratio:1/1}
+#luApp .frames.c1 .ph{aspect-ratio:2/1}
 #luApp .note{font-size:12px;color:var(--muted);margin:8px 0 0}
 #luApp .row{display:flex;gap:8px;margin-top:14px}
 #luApp .slot,#luApp .micro,#luApp .cap,#luApp .slot b{font-size:12px!important}
@@ -1539,7 +1538,7 @@ const preConvenienceRender=render;render=function(){preConvenienceRender();addCo
  ['Liner','2 min','Pen liner, tight to lashes with a small flick.',[['Tight to lashes','Pen liner at the lash line'],['Small flick','Short liner flick at outer corner']]],
  ['Lashes','1 min','Volumising mascara, one heavy coat.',[['One heavy coat','Volumising mascara on lashes']]],
  ['Lips','1 min 30 sec','Red-brown lip liner, then brown lipstick.',[['Lip liner','Lip liner on lips'],['Brown lipstick','Brown lipstick applied']]],
- ['Hair','1 min','Dry shampoo at roots, tousle.',[['Dry shampoo at roots, tousle','Dry shampoo sprayed at roots, hair tousled']]]]},
+ ['Hair','1 min','Dry shampoo at roots, tousle into a loose messy low bun with a few strands out.',[['Dry shampoo at roots, tousle','Dry shampoo sprayed at roots, hair tousled']]]]},
 {id:'clean',name:'Clean Girl, Sleek Edition',alias:'Polished minimal',mins:4,tag:'Meetings, travel days, polished daytime occasions.',guide:'clean-guide.png',hero:'Sleek low ponytail or bun, clean skin, minimal makeup, clear glasses, crisp top, natural light.',steps:[
  ['SPF','30 sec','SPF, full face.',[['SPF on full face','SPF spread on the face']]],
  ['Hair','1 min','Smoothing cream, low pony or bun.',[['Smoothing cream through hair','Cream worked through mid-lengths'],['Low pony or bun','Sleek low ponytail or bun']]],
