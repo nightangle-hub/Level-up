@@ -1618,4 +1618,4 @@ const preConvenienceRender=render;render=function(){preConvenienceRender();addCo
 if(window.LevelUpPrizes){try{window.LevelUpPrizes.install({app,content,getXP:()=>C.trainingXP(state),getLegacyMist:()=>!!(state.trainingRewardReveals||[]).includes('mist-100'),getView:()=>view,wrapDetail:fn=>{const prior=detailView;detailView=v=>fn(v,prior(v))},afterRender:fn=>{const prior=render;render=function(){prior();fn()}},rerender:()=>render()})}catch{}}
 render();requestAnimationFrame(()=>{animate();window.LevelUpStartup.ready()});if('serviceWorker'in navigator&&['https:','http:'].includes(location.protocol)){navigator.serviceWorker.register('./service-worker.js').catch(()=>{})}
 })();
-</script></body></html>
+</script><script src="levelup-today.js"></script></body></html>
