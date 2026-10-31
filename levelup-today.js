@@ -36,7 +36,7 @@ function html(){
   let dinner;
   if(meal.cooked)dinner=item('Dinner','Cooked: '+meal.cooked,'Counts toward Cook.',true,btn('Meals','dinner'));
   else if(plan.tonight)dinner=item('Dinner','Tonight: '+plan.tonight.title,'Planned. Cook it and mark it cooked.',false,btn('Open recipe','user-recipe-'+plan.tonight.id));
-  else if(plan.week)dinner=item('Dinner','Nothing planned tonight','Cook 2 meals this week for the bonus.',false,btn('Meals','dinner'));
+  else if(plan.week)dinner=item('Dinner','Nothing planned tonight',plan.week+' of '+(window.LevelUpPlan?window.LevelUpPlan.MAX:5)+' dinners planned this week.',false,planBtn('Edit plan'));
   else dinner=item('Dinner','Plan the week','Pick up to 5 dinners and shop once.',false,planBtn('Plan'));
   return '<section id="luToday" class="lut"><style>'+
   '#luToday{margin:18px 0}#luToday h2{font:400 22px/1.2 Georgia,serif;margin:0 0 4px}#luToday .micro{margin:0 0 8px}#luToday .lut-card{border:1px solid var(--border);background:var(--card);border-radius:18px;padding:18px 18px 10px;margin:0 0 14px}#luToday ul{list-style:none;margin:0;padding:0}'+
@@ -53,7 +53,6 @@ function html(){
   item('Move',train.movedToday?'Logged today':'Next: '+train.next,train.movedToday?'Nice, that counts toward Move.':'Your next session in the rotation.',train.movedToday,btn('Open','training'))+
   item('Look',look.name,look.done?'Done for today. Looks earn no XP.':'Your current look. Optional, no XP.',look.done,btn('Open','beauty'))+
   dinner+
-  item('Plan',plan.week?plan.week+' of '+(window.LevelUpPlan?window.LevelUpPlan.MAX:5)+' dinners planned':'No plan yet this week',plan.week>=3?'Plan quest cleared. Edit or shop anytime.':'Plan 3 or more dinners to clear the quest.',plan.week>=3,planBtn(plan.week?'Edit':'Plan'))+
   '</ul></div></section>'}
 function inject(){
   const c=document.getElementById('content');if(!c)return;
