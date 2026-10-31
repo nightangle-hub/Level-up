@@ -1,0 +1,20 @@
+Level Up prizes v6 file changes compared with v5
+
+Changed existing files
+prizes/catalog.js
+service-worker.js
+PRIZES-README.txt
+PRIZES-TESTS.txt
+PRIZES-FILES.txt
+
+Added files
+assets/prizes/r01.png
+assets/prizes/r02.png
+assets/prizes/r03.png
+assets/prizes/r04.png
+assets/prizes/r05.png
+assets/prizes/r06.png
+PRIZES-VARIETY.txt
+
+Removed files: none.
+All other v5 files are byte identical.
