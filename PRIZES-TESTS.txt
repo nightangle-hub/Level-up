@@ -1,0 +1,28 @@
+Level Up prizes v6 test report
+
+PASS: Each new scene shows its picture in the gallery and can be equipped.
+A deterministic synthetic XP fixture selected all six new candidates through the real draw engine. The browser gallery contained all six image paths. Each scene was opened, its 1448 pixel image decoded and Use this applied. Every Companion card background matched the corresponding new PNG.
+
+PASS: Use on Today works for each new scene with the dark overlay, readable at 320, 390 and 1280px.
+All six buttons were available. Each scene was equipped on Today and tested at the three effective CSS widths, for 18 scene and width checks. Each rendered the correct picture and unchanged 72 percent dark overlay. The unchanged overlay and text styles retain the previous minimum 5.80:1 contrast bound even over a white source pixel. Source pictures were visually reviewed for low contrast and calm detail.
+
+PASS: The variety check list confirms all six are distinct in subject, time of day and palette.
+See PRIZES-VARIETY.txt for each subject, specified time label, complete palette, creature name and distinctive composition. No two rows have the same subject, specified time label or whole palette. Dusk and late dusk are neighbouring phases and are retained according to the revised brief. Individual hues may recur, while their dominant colour and accent pairings differ. Visual review confirms different compositions rather than merely different skies.
+
+PASS: Full XP simulation from 0 to 10000 passes, with no existing draw changed after reload.
+Two complete integer XP simulations checked all 10,001 values, reloading at each value. All 55 slots unlocked once, with no repeats and correct tier and role eligibility. Eighty complete random runs also passed. Separately, v5 receipts were loaded and reloaded in v6 at every integer XP value from 0 through 10000. Their raw saved draws and seen receipts stayed byte identical. Partial v5 saves continued through 10000 without any existing slot changing. New candidate reachability was confirmed for all six additions.
+
+PASS: Old saved preferences and backups still load.
+Existing Today, corner scene and personal reward preferences loaded unchanged. Backup export and import preserved the raw old preferences. Separate round trips preserved new r01 through r06 Today and corner choices. No storage keys, preference schema or backup code changed.
+
+PASS: The 26 existing scenes and their files are byte identical.
+Every previous catalogue object is unchanged. Removing the appended six candidates restores the entire original catalog.js byte for byte. All 26 existing scene PNGs, including the 200 XP example, are unchanged.
+
+PASS: Original Appearance photos, companion drag code and floating companion are byte identical to v5.
+The complete index.html, all photos, UI code, stylesheet, XP core, preferences core, backup module and other original files are byte identical except the five requested catalogue, cache and documentation files listed in PRIZES-FILES.txt. The six new PNGs and variety document are the only additions.
+
+PASS: No horizontal scrolling and no console errors at 320, 390 and 1280px.
+All 18 Today scene and width checks fit the viewport and reported zero runtime errors. The gallery also fit at each width. Final console warning and error logs were empty. Synthetic saved app records were unchanged.
+
+Additional checks and limits
+The schedule is still 55 slots and the pool is now 63 candidates. Each new scene is rare, with three milestone and three normal roles. All 142 precached paths exist, each new image is listed once and the cache name ends in prizes-v6. Every new PNG is 1448 x 1086 and was visually reviewed for the no-faces rule. Tests used isolated synthetic records. Physical devices and operating system motion settings were not retested because app behaviour and motion code are unchanged. No live site or private records were modified. Test fixtures are excluded from the ZIP.

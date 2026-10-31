@@ -1,0 +1,51 @@
+Level Up prizes v6 variety check
+
+PASS: Six different main subjects, specified time labels and complete colour pairings. Each scene has a different composition rather than only a different sky.
+
+1. r01 Lantern moon creek
+Subject: A crescent creek through rounded sandstone terraces, with the original creature Cindlebun beside the water.
+Time: Dusk.
+Colours: Warm amber and teal. Catalogue colour #ad865b.
+Creature: Cindlebun, a small round amber pebble creature with soft petal fins and a pale crescent ridge. Back view, no facial features.
+Distinctive shape: Open sandstone amphitheatre and winding creek. It avoids the wooded bridge composition of the existing creek and pond scenes.
+
+2. r02 Glowmoss hollow
+Subject: An enclosed hollow root interior with dim glowing moss and the original sleeping creature Nookwisp.
+Time: Night, retaining the requested deep blue-green glow.
+Colours: Deep blue and moss green. Catalogue colour #365767.
+Creature: Nookwisp, a round blue-grey velvet creature with a plum spiral shell and soft green moss collar. Curled away from view, no facial features.
+Distinctive shape: Close enclosed root arches and a dry moss cradle, rather than an open woodland landscape.
+
+3. r03 Cotton cloud stairs
+Subject: One sweeping staircase rising into rounded clouds.
+Time: Morning.
+Colours: Soft pink and cream. Catalogue colour #d7bfc4.
+Creature: None.
+Distinctive shape: Large diagonal steps in open sky. No existing scene has this cloud staircase subject.
+
+4. r04 Harbour of paper boats
+Subject: Folded paper boats and low floating lanterns in an oval stone harbour.
+Time: Evening.
+Colours: Dusky lilac with muted gold accents. Catalogue colour #94819d.
+Creature: None.
+Distinctive shape: High oblique view, curved stone quays and angular paper boats. Different from the existing harbour's wooden boat, jetties and misty horizontal panorama.
+
+5. r05 Tidewind meadow
+Subject: Tall bending grass and the original gentle wind creature Swaypuff in an open meadow.
+Time: Afternoon.
+Colours: Sage and butter yellow. Catalogue colour #9aa87b.
+Creature: Swaypuff, a small round butter-yellow puff with long sage ribbon fins and a trailing tuft. No separate head or facial features.
+Distinctive shape: Broad horizontal grass bands and open hills, with no woodland enclosure or water. A generated eye-like dot was removed with the image tool before delivery.
+
+6. r06 Starlit tea garden
+Subject: A round copper tea table in an open garden courtyard, with the first stars appearing.
+Time: Late dusk, as revised by the user.
+Colours: Copper-led with soft lilac. Catalogue colour #aa827e.
+Creature: None.
+Distinctive shape: Foreground round table and curved trellis in an open courtyard. Different from the existing floating tea pavilion on water.
+
+Time and palette clarification
+The six specified time labels are Dusk, Night, Morning, Evening, Afternoon and Late dusk. Dusk and late dusk are neighbouring twilight phases, kept as requested in the revised brief. Palette families may share individual hues: the harbour is lilac-led with gold, while the tea garden is copper-led with lilac. No two complete colour pairings, main subjects or specified time labels are identical.
+
+Review method
+The six finished pictures were reviewed together and against the existing scene set. The difference is visible in their landforms, enclosed versus open framing, architecture, camera angle and principal objects. All six are 1448 x 1086 PNGs. The three creatures are small, round, gentle and faceless, with different colours and silhouettes. No visible people, faces, text, logos or brand names are present.
