@@ -12,9 +12,11 @@ const noiseToken=t=>/^[^A-Za-z0-9]*\d?[^A-Za-z0-9]*$/.test(t)&&t.length<=3||/^[A
 const cleanName=s=>{const w=norm(s).replace(/^[\s^#*“”"'`~|.:;,\-]+/,'').split(' ');while(w.length>2&&noiseToken(w[0])&&!(/^\d{1,3}$/.test(w[0])&&/^[x×]$/i.test(w[1]||'')))w.shift();return w.join(' ').replace(/[\s:;,>|]+$/,'').trim()};
 function parse(text,options={}){
  if(typeof text!=='string'||text.length>60000)throw Error('Receipt text must be under 60,000 characters.');
+ const typed=!options.lines,cn=s=>typed?norm(s).replace(/^[\s^#*“”"'`~|.:;,\-]+/,'').replace(/[\s:;,>|]+$/,'').trim():cleanName(s);
+ const flat=text.split(/\r?\n/).map(norm).filter(Boolean);if(flat.length<=4&&(text.match(/\$?\d+[.,]\d{2}\b/g)||[]).length>=3)text=text.replace(/\s+(?=(?:store|date|time|total|subtotal|check)\s*:)/gi,'\n').replace(/(\d+[.,]\d{2})(?=\s+[A-Za-z])/g,'$1\n');
  const lines=text.split(/\r?\n/).map(norm).filter(Boolean),items=[],totals=[],dates=[],warnings=[];let store='',adjustments=false,omitted=0,started=false,ended=false,pending=null,pendingSrc='',last=null,ambiguous=false;
  const quality=new Map((options.lines||[]).map(l=>[norm(l.text),l]));
- const add=(name,price,source,nameSource=source)=>{name=norm(name).replace(/\s*\?{2,}\s*$/,'');let qty=1;const qa=name.match(/^(\d{1,3})\s*[x×]\s+(?=\D)/i),qb=name.match(/\s+[x×]\s*(\d{1,3})$/i);if(qa){qty=+qa[1];name=name.slice(qa[0].length)}else if(qb){qty=+qb[1];name=name.slice(0,qb.index)}if(qty<1||qty>1000)qty=1;name=cleanName(name);if(!name||items.length>=150)return;const q=quality.get(source),nq=quality.get(nameSource),words=q?.words||[],pricePattern=/^\$?\d+[.,]\d{2}[A-Z*]?$/,priceWords=words.filter(w=>pricePattern.test(w.text)),nameWords=(nq?.words||[]).filter(w=>!pricePattern.test(w.text));const minimum=a=>a.length?Math.round(Math.min(...a.map(w=>Number(w.confidence)||0))):null;const pack=name.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/i),unit=pack?pack[2].toLowerCase():null,mult=unit==='kg'||unit==='l'?1000:1;const it={name,price,amount:null,unit:'unknown',precision:'unknown',descriptor:'',uncertain:true,nameConfidence:minimum(nameWords),priceConfidence:minimum(priceWords),packSize:pack?Number(pack[1].replace(',','.'))*mult:null,packUnit:pack?(unit==='kg'?'g':unit==='l'?'ml':unit):'unknown',packs:qty,promotion:/^[^A-Za-z0-9]*\^/.test(source)?'Promotional price indicated on receipt':''};items.push(it);return it};
+ const add=(name,price,source,nameSource=source)=>{name=norm(name).replace(/\s*\?{2,}\s*$/,'');let qty=1;const qa=name.match(/^(\d{1,3})\s*[x×]\s+(?=\D)/i),qb=name.match(/\s+[x×]\s*(\d{1,3})$/i);if(qa){qty=+qa[1];name=name.slice(qa[0].length)}else if(qb){qty=+qb[1];name=name.slice(0,qb.index)}if(qty<1||qty>1000)qty=1;name=cn(name);if(!name||items.length>=150)return;const q=quality.get(source),nq=quality.get(nameSource),words=q?.words||[],pricePattern=/^\$?\d+[.,]\d{2}[A-Z*]?$/,priceWords=words.filter(w=>pricePattern.test(w.text)),nameWords=(nq?.words||[]).filter(w=>!pricePattern.test(w.text));const minimum=a=>a.length?Math.round(Math.min(...a.map(w=>Number(w.confidence)||0))):null;const pack=name.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/i),unit=pack?pack[2].toLowerCase():null,mult=unit==='kg'||unit==='l'?1000:1;const it={name,price,amount:null,unit:'unknown',precision:'unknown',descriptor:'',uncertain:true,nameConfidence:minimum(nameWords),priceConfidence:minimum(priceWords),packSize:pack?Number(pack[1].replace(',','.'))*mult:null,packUnit:pack?(unit==='kg'?'g':unit==='l'?'ml':unit):'unknown',packs:qty,promotion:/^[^A-Za-z0-9]*\^/.test(source)?'Promotional price indicated on receipt':''};items.push(it);return it};
  const box=l=>quality.get(l)?.bbox||null,overlaps=(a,b)=>!!(a&&b)&&(b.y0-a.y1)<=-0.15*Math.max(1,b.y1-b.y0);
  for(let i=0;i<lines.length;i++){
   const line=lines[i],p=priceAtEnd(line);
@@ -34,13 +36,13 @@ function parse(text,options={}){
   const qm=!p&&line.match(/^\W*(\d)?\W*@\s*\$?\s*(\d+[.,]\d{2})\s*(?:each|ea)\b/i);
   if(qm){if(last&&last.item&&qm[1]){const q=Number(qm[1]),unit=Number(qm[2].replace(',','.'));if(q>=1&&q<=1000)last.item.packs=q;if(last.item.price===null)last.item.price=Math.round(q*unit*100)/100}omitted++;continue}
   if(/^[^A-Za-z]*\$\s*\d+[.,]\d{2}\s*(?:e[a-z]{2,3}|ea)\W*$/i.test(line)){omitted++;continue}
-  let name=cleanName(p?line.slice(0,p.index):line);if(p&&name.length<=3&&!/[A-Za-z]{3}/.test(name))name='';
+  let name=cn(p?line.slice(0,p.index):line);if(p&&name.length<=3&&!/[A-Za-z]{3}/.test(name))name='';
   const quantityOnly=/^(?:\d+(?:[.,]\d+)?\s*(?:kg|g|ml|l|@)\b|@\s*\$|\d+\s*x\s*\$)/i.test(name);
   if(p&&(quantityOnly||!/[A-Za-z]{2}/.test(name))){if(pending){const it=add(pending,p.price,line,pendingSrc);last={item:it,box:box(line)};pending=null;started=true}else omitted++;continue}
   if(!name||!/[A-Za-z]{2}/.test(name)||quantityOnly||/^[-=*_\s\d.,:/]+$/.test(name)){omitted++;continue}
   if(p){const join=!!pending&&overlaps(box(pendingSrc),box(line));if(pending&&!join&&started)add(pending,null,pending);const it=add(join?pending+' '+name:name,p.price,line);pending=null;last={item:it,box:box(line)};started=true;continue}
   if(name.length>65||name.split(' ').length>8){pending=null;omitted++;continue}
-  if(last&&last.item&&overlaps(last.box,box(line))){last.item.name=cleanName(last.item.name+' '+name);continue}
+  if(last&&last.item&&overlaps(last.box,box(line))){last.item.name=cn(last.item.name+' '+name);continue}
   if(started&&pending)add(pending,null,pending);pending=name;pendingSrc=line;
  }
  if(pending&&!ended)add(pending,null,pending);
