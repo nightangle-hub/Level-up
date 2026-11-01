@@ -27,6 +27,7 @@ function parse(text,options={}){
   if(adjustment.test(line)){adjustments=true;pending=null;omitted++;continue}
   if(taxOrSaving.test(line)||sensitive.test(line)||/\b\d{1,2}[/:.-]\d{1,2}[/:.-]\d{2,4}\b/.test(line)||/\b\d{1,2}:\d{2}\b/.test(line)||(!p&&/\b(woolworths|coles|aldi|iga|costco|harris farm|foodworks)\b/i.test(line))){pending=null;omitted++;continue}
   if(ended){omitted++;continue}
+  if(/^[^A-Za-z]*\$\s*\d+[.,]\d{2}\s*(?:e[a-z]{2,3}|ea)\W*$/i.test(line)){omitted++;continue}
   const qm=!p&&line.match(/^\W*(\d)?\W*@\s*\$?\s*(\d+[.,]\d{2})\s*(?:each|ea)\b/i);
   if(qm){if(last&&last.item&&qm[1]){const unit=Number(qm[2].replace(',','.')),expected=Math.round(Number(qm[1])*unit*100)/100;if(last.item.price===null||Math.abs(last.item.price-expected)>0.03)last.item.price=expected}omitted++;continue}
   let name=cleanName(p?line.slice(0,p.index):line);if(p&&name.length<=3&&!/[A-Za-z]{3}/.test(name))name='';
