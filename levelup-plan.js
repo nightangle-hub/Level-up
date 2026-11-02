@@ -1,4 +1,4 @@
-/* Tierlock weekly dinner plan. Plan up to 5 dinners for a week, then build one shopping list from them.
+/* RaiKiba weekly dinner plan. Plan up to 5 dinners for a week, then build one shopping list from them.
    Stores only its own key and reads recipes from the saved app data. Saving 3 or more dinners clears the weekly Plan quest. */
 (function(){
 'use strict';
