@@ -1,4 +1,4 @@
-/* Level Up weekly missions. Mission XP is derived from existing records, so nothing here can drift out of sync.
+/* Tierlock weekly missions. Mission XP is derived from existing records, so nothing here can drift out of sync.
    Move: 3 days with a training session or cardio, 30 XP. Cook: 2 days with a cooked meal, 10 XP.
    Plan: save a weekly dinner plan of 3 or more dinners, 10 XP. Clear bonus: all three in one week, 10 XP.
    Monthly photo check: 10 XP per month. Personal best: 10 XP per exercise per week when you beat every earlier set.
