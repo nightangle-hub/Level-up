@@ -1,5 +1,5 @@
 /* Level Up Today panel: this week's missions plus what to do today.
-   Read-only: it reads saved data and never writes to the main app state. Looks and daily care earn no XP. */
+   It reads saved data and never writes to the main app state. The only thing it saves is the pause setting, in levelup-missions-v1. Looks and daily care earn no XP. */
 (function(){
 'use strict';
 const LOOKS={office:'Office',street:'Street',event:'Event',lazy:'Lazy Day',date:'Date Night',glass:'Glass Skin Girl',cherry:'Cherry Blossom Crush',grunge:'Soft Grunge Seoul',clean:'Clean Girl, Sleek Edition',strawberry:'Strawberry Milk Glow',redbean:'Red Bean Romantic'};
@@ -23,6 +23,17 @@ const RANKS=[[18,'S'],[12,'A'],[8,'B'],[5,'C'],[3,'D'],[1,'E']];
 function rankFor(level){for(const [min,r] of RANKS)if(level>=min)return r;return 'E'}
 function planInfo(t){const P=window.LevelUpPlan;if(!P)return {week:0,tonight:null};return {week:P.count(P.monday(t)),tonight:P.dinnerFor(t)}}
 function bar(have,target){let h='';for(let i=0;i<target;i++)h+='<i class="lut-dot'+(i<have?' on':'')+'"></i>';return h}
+function systemExtras(st,t){
+  const M=window.LevelUpMissions,p=st.paused,sk=st.streak,stats=st.stats||{str:0,sta:0,foc:0};
+  const tiles='<div class="lut-stats"><span><b>'+stats.str+'</b>STR sets</span><span><b>'+stats.sta+'</b>STAMINA min</span><span><b>'+stats.foc+'</b>FOCUS meals and shops</span></div>';
+  let line;
+  if(p)line='<p class="lut-sys">[System] Paused ('+esc(p.reason)+') since '+esc(p.from)+(p.to?', until '+esc(p.to):'')+'. Your streak is safe. Quests stay open if you want them.</p>';
+  else line='<p class="lut-sys">[System] Streak: '+sk.streak+' week'+(sk.streak===1?'':'s')+' · Shield '+(sk.shieldReady?'ready (one missed week this month is forgiven)':'used this month')+'.</p>';
+  const pb=st.pb&&st.pb.week?'<p class="lut-sys">[System] Personal best'+(st.pb.week===1?'':'s')+' this week: '+st.pb.week+' (+'+(st.pb.week*M.XP.pb)+' XP).</p>':'';
+  const ctl=p?'<button type="button" class="lut-go" data-lu-resume="1">Resume</button>':'<details class="lut-pause"><summary>Pause for holiday or injury</summary><label>Reason<select id="luPauseReason"><option value="holiday">Holiday</option><option value="injury">Injury</option><option value="other">Other</option></select></label><label>Back on (optional)<input type="date" id="luPauseTo" min="'+esc(t)+'"></label><button type="button" class="lut-go" data-lu-pause="1">Start pause</button></details>';
+  return tiles+line+pb+ctl}
+function bossRow(st){const b=st.boss;if(!b)return '';return '<li class="lut-row'+(b.done?' done':'')+'"><span class="lut-name"><b>Monthly boss</b><small>Train on '+b.target+' days this month'+(b.target<M_BOSS()?' (shortened for your pause)':'')+'</small></span><span class="lut-prog">'+(b.done?'':'<small>'+b.have+'/'+b.target+'</small>')+'</span><span class="lut-xp">'+(b.done?'Defeated':'+'+window.LevelUpMissions.XP.boss+' XP')+'</span></li>'}
+function M_BOSS(){return window.LevelUpMissions.BOSS_TARGET}
 function html(){
   const M=window.LevelUpMissions;if(!M)return '';
   const state=read('bloom-zen-v1')||{},t=today(),st=M.status(state);
@@ -44,11 +55,12 @@ function html(){
   '#luToday .lut-prog{display:flex;gap:4px}#luToday .lut-dot{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--accent);display:block}#luToday .lut-dot.on{background:var(--accent)}#luToday .lut-xp{font-size:12px;color:var(--muted);min-width:52px;text-align:right}#luToday .done .lut-xp{color:var(--accent)}'+
   '#luToday .lut-k{font-size:10px;letter-spacing:1px;color:var(--muted);width:58px;text-transform:uppercase}#luToday .lut-go{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}#luToday .done .lut-t b::after{content:" \\2713";color:var(--accent)}'+
   '#luToday .lut-rank{display:flex;align-items:center;gap:10px;margin:2px 0 10px}#luToday .lut-badge{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font:400 20px Georgia,serif;color:var(--accent)}#luToday .lut-sys{margin:0 0 6px;font-size:12px;color:var(--accent);letter-spacing:.3px}'+
+  '#luToday .lut-stats{display:flex;gap:16px;margin:0 0 10px;flex-wrap:wrap}#luToday .lut-stats span{font-size:11px;color:var(--muted);display:flex;flex-direction:column;letter-spacing:.3px}#luToday .lut-stats b{font:400 20px Georgia,serif;color:var(--text)}#luToday .lut-pause{margin:8px 0 12px;font-size:13px}#luToday .lut-pause label{display:flex;gap:8px;align-items:center;margin:8px 0}#luToday .lut-pause input,#luToday .lut-pause select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px}'+
   '</style>'+
-  '<div class="lut-card"><p class="micro">THE SYSTEM · WEEKLY QUESTS</p><div class="lut-rank"><span class="lut-badge" aria-label="Rank '+rankFor(xp.level)+'">'+rankFor(xp.level)+'</span><div><h2>Four quests this week</h2><small>Rank '+rankFor(xp.level)+' · Level '+xp.level+' · resets Monday, no penalties</small></div></div>'+
+  '<div class="lut-card"><p class="micro">THE SYSTEM · WEEKLY QUESTS</p><div class="lut-rank"><span class="lut-badge" aria-label="Rank '+rankFor(xp.level)+'">'+rankFor(xp.level)+'</span><div><h2>Four quests this week</h2><small>Rank '+rankFor(xp.level)+' · Level '+xp.level+' · resets Monday, no penalties</small></div></div>'+systemExtras(st,t)+
   (gate?'<p class="lut-sys">[System] Gate cleared. All quests complete.</p>':cleared.length?'<p class="lut-sys">[System] Quest cleared: '+esc(cleared.join(', '))+'.</p>':'')+
   '<ul>'+rows+'</ul>'+
-  '<ul><li class="lut-row'+(st.photoDone?' done':'')+'"><span class="lut-name"><b>Monthly photo check</b><small>Save this month\'s baseline photo in Appearance</small></span><span class="lut-xp">'+(st.photoDone?'Done':'+10 XP')+'</span></li></ul></div>'+
+  '<ul><li class="lut-row'+(st.photoDone?' done':'')+'"><span class="lut-name"><b>Monthly photo check</b><small>Save this month\'s baseline photo in Appearance</small></span><span class="lut-xp">'+(st.photoDone?'Done':'+10 XP')+'</span></li>'+bossRow(st)+'</ul></div>'+
   '<div class="lut-card"><p class="micro">TODAY</p><ul>'+
   item('Move',train.movedToday?'Logged today':'Next: '+train.next,train.movedToday?'Nice, that counts toward Move.':'Your next session in the rotation.',train.movedToday,btn('Open','training'))+
   item('Look',look.name,look.done?'Done for today. Looks earn no XP.':'Your current look. Optional, no XP.',look.done,btn('Open','beauty'))+
@@ -62,5 +74,6 @@ function inject(){
   if(existing){if(existing.outerHTML!==node.outerHTML)existing.replaceWith(node);return}
   anchor.parentNode.insertBefore(node,anchor)}
 let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{inject()}catch(e){}})}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-lu-pause],[data-lu-resume]');if(!b)return;const M=window.LevelUpMissions;if(!M)return;if(b.hasAttribute('data-lu-resume'))M.resume();else{const r=document.getElementById('luPauseReason'),to=document.getElementById('luPauseTo');M.pause(r?r.value:'other',to?to.value:'')}schedule()});
 function start(){const c=document.getElementById('content');if(!c)return;new MutationObserver(schedule).observe(c,{childList:true});document.addEventListener('bloom-training-xp',schedule);window.addEventListener('storage',schedule);schedule()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start()})();
