@@ -1,4 +1,4 @@
-/* Tierlock Today panel: this week's missions plus what to do today.
+/* RaiKiba Today panel: this week's missions plus what to do today.
    It reads saved data and never writes to the main app state. The only thing it saves is the pause setting, in levelup-missions-v1. Looks and daily care earn no XP. */
 (function(){
 'use strict';
