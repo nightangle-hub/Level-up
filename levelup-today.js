@@ -22,6 +22,7 @@ function mealInfo(state,t){const m=((state&&state.cookedMeals)||[]).filter(x=>x&
 const RANKS=[[18,6],[12,5],[8,4],[5,3],[3,2],[1,1]];
 function rankFor(level){for(const [min,r] of RANKS)if(level>=min)return r;return 1}
 function planInfo(t){const P=window.LevelUpPlan;if(!P)return {week:0,tonight:null};return {week:P.count(P.monday(t)),tonight:P.dinnerFor(t)}}
+function nextTier(level,total){const r=rankFor(level);if(r>=6)return null;const m=RANKS.find(x=>x[1]===r+1)[0],from=(RANKS.find(x=>x[1]===r)[0]-1)*100,to=(m-1)*100;return {tier:r+1,from,to,have:Math.max(0,total-from),need:to-from,left:Math.max(0,to-total)}}
 function bar(have,target){let h='';for(let i=0;i<target;i++)h+='<i class="lut-dot'+(i<have?' on':'')+'"></i>';return h}
 function systemExtras(st,t){
   const M=window.LevelUpMissions,p=st.paused,sk=st.streak,stats=st.stats||{str:0,sta:0,foc:0};
@@ -34,6 +35,8 @@ function systemExtras(st,t){
   return tiles+line+pb+ctl}
 function bossRow(st){const b=st.boss;if(!b)return '';return '<li class="lut-row'+(b.done?' done':'')+'"><span class="lut-name"><b>Monthly boss</b><small>Train on '+b.target+' days this month'+(b.target<M_BOSS()?' (shortened for your pause)':'')+'</small></span><span class="lut-prog">'+(b.done?'':'<small>'+b.have+'/'+b.target+'</small>')+'</span><span class="lut-xp">'+(b.done?'Defeated':'+'+window.LevelUpMissions.XP.boss+' XP')+'</span></li>'}
 function M_BOSS(){return window.LevelUpMissions.BOSS_TARGET}
+function modePill(st){const M=window.LevelUpMissions,m=M.MODES[st.mode]||M.MODES.normal;return '<p class="lut-sys"><button type="button" class="lut-mode" data-action="open" data-view="pace" aria-label="Weekly pace: '+esc(m.label)+'. Change">Pace: '+esc(m.label)+' ›</button>'+(st.pendingMode?' <small>'+esc(M.MODES[st.pendingMode].label)+' starts Monday</small>':'')+'</p>'}
+function milestone(xp){const n=nextTier(xp.level,xp.total);if(!n)return '<p class="lut-sys">Top tier reached. Keep going for the next reward.</p>';const pct=Math.min(100,Math.round(n.have/n.need*100));return '<div class="lut-mile" role="img" aria-label="'+n.left+' XP to Tier '+n.tier+'"><small>Next milestone: Tier '+n.tier+' · '+n.left+' XP to go</small><span class="lut-track"><i style="width:'+pct+'%"></i></span></div>'}
 function html(){
   const M=window.LevelUpMissions;if(!M)return '';
   const state=read('bloom-zen-v1')||{},t=today(),st=M.status(state);
@@ -56,8 +59,9 @@ function html(){
   '#luToday .lut-k{font-size:10px;letter-spacing:1px;color:var(--muted);width:58px;text-transform:uppercase}#luToday .lut-go{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}#luToday .done .lut-t b::after{content:" \\2713";color:var(--accent)}'+
   '#luToday .lut-rank{display:flex;align-items:center;gap:10px;margin:2px 0 10px}#luToday .lut-badge{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font:400 20px Georgia,serif;color:var(--accent)}#luToday .lut-sys{margin:0 0 6px;font-size:12px;color:var(--accent);letter-spacing:.3px}'+
   '#luToday .lut-stats{display:flex;gap:16px;margin:0 0 10px;flex-wrap:wrap}#luToday .lut-stats span{font-size:11px;color:var(--muted);display:flex;flex-direction:column;letter-spacing:.3px}#luToday .lut-stats b{font:400 20px Georgia,serif;color:var(--text)}#luToday .lut-bonus summary{cursor:pointer;font-size:13px;color:var(--muted);padding:6px 0 10px}#luToday .lut-pause{margin:8px 0 12px;font-size:13px}#luToday .lut-pause label{display:flex;gap:8px;align-items:center;margin:8px 0}#luToday .lut-pause input,#luToday .lut-pause select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px}'+
+  '#luToday .lut-mode{font:inherit;font-size:12px;letter-spacing:.3px;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:999px;padding:4px 10px;cursor:pointer}#luToday .lut-mile{margin:0 0 10px}#luToday .lut-mile small{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}#luToday .lut-track{display:block;height:6px;border-radius:3px;background:var(--border);overflow:hidden}#luToday .lut-track i{display:block;height:100%;background:var(--accent)}'+
   '</style>'+
-  '<div class="lut-card"><p class="micro">WEEKLY QUESTS</p><div class="lut-rank"><span class="lut-badge" aria-label="Tier '+rankFor(xp.level)+'">'+rankFor(xp.level)+'</span><div><h2>This week</h2><small>Tier '+rankFor(xp.level)+' · Level '+xp.level+' · resets Monday, no penalties</small></div></div>'+systemExtras(st,t)+
+  '<div class="lut-card"><p class="micro">WEEKLY QUESTS</p><div class="lut-rank"><span class="lut-badge" aria-label="Tier '+rankFor(xp.level)+'">'+rankFor(xp.level)+'</span><div><h2>This week</h2><small>Tier '+rankFor(xp.level)+' · Level '+xp.level+' · resets Monday, no penalties</small></div></div>'+modePill(st)+milestone(xp)+systemExtras(st,t)+
   (gate?'<p class="lut-sys">Clear. All quests complete.</p>':cleared.length?'<p class="lut-sys">Quest cleared: '+esc(cleared.join(', '))+'.</p>':'')+
   '<ul>'+rows+'</ul>'+
   '<details class="lut-bonus"><summary>Bonus quests</summary><ul><li class="lut-row'+(st.photoDone?' done':'')+'"><span class="lut-name"><b>Monthly photo check</b><small>Save this month\'s baseline photo in Appearance</small></span><span class="lut-xp">'+(st.photoDone?'Done':'+10 XP')+'</span></li>'+bossRow(st)+'</ul></details></div>'+
