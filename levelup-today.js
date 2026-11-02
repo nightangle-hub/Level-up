@@ -66,7 +66,7 @@ function html(){
   '</ul></div></section>'}
 function inject(){
   const c=document.getElementById('content');if(!c)return;
-  const anchor=c.querySelector('.concept-feature');if(!anchor)return;
+  const anchor=c.querySelector('.concept-feature');if(!anchor||!c.querySelector('.concept-hero'))return;
   const existing=c.querySelector('#luToday');const next=html();if(!next)return;
   const tmp=document.createElement('div');tmp.innerHTML=next;const node=tmp.firstElementChild;
   if(existing){if(existing.outerHTML!==node.outerHTML)existing.replaceWith(node);return}
