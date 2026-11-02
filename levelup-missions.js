@@ -16,7 +16,7 @@ function localDay(v){if(!okDate(v))return null;if(v.length<=10)return v;const d=
 function bucket(map,week,kind,day){if(!map[week])map[week]={move:new Set(),cook:new Set(),plan:new Set()};map[week][kind].add(day)}
 function gather(state,extras,today){
   const weeks={};state=state||{};extras=extras||{};
-  for(const e of state.trainingLogs||[]){if(!e||e.voided||!okDate(e.date)||e.date>today)continue;if(e.kind==='session'||e.kind==='cardio')bucket(weeks,weekStart(e.date),'move',e.date)}
+  for(const e of state.trainingLogs||[]){if(!e||e.voided||!okDate(e.date)||e.date>today)continue;if(e.kind==='session'||e.kind==='cardio'||e.kind==='set')bucket(weeks,weekStart(e.date),'move',e.date)}
   for(const m of state.cookedMeals||[]){if(!m||!okDate(m.date)||m.date>today)continue;bucket(weeks,weekStart(m.date),'cook',m.date)}
   const thisWeek=weekStart(today);
   for(const w of extras.planWeeks||[]){if(!okDate(w)||w>thisWeek)continue;bucket(weeks,weekStart(w),'plan',w.slice(0,10))}
