@@ -77,19 +77,22 @@ function compute(state,extras,now){
 const STORE='levelup-missions-v1',PLAN_STORE='levelup-mealplan-v1',MIN_DINNERS=3;
 function planWeeks(){try{const o=JSON.parse(root.localStorage.getItem(PLAN_STORE)||'{}'),w=o.weeks||{};return Object.keys(w).filter(k=>okDate(k)&&w[k]&&w[k].days&&Object.keys(w[k].days).filter(d=>w[k].days[d]&&w[k].days[d].id).length>=MIN_DINNERS)}catch(e){return []}}
 function cleanPauses(a){return (Array.isArray(a)?a:[]).filter(p=>p&&okDate(p.from)&&(p.to===null||p.to===undefined||okDate(p.to)&&p.to>=p.from)).map(p=>({from:p.from.slice(0,10),to:p.to?p.to.slice(0,10):null,reason:REASONS.includes(p.reason)?p.reason:'other'})).slice(-40)}
+function cleanTier(t){return Number.isInteger(t)&&t>=1&&t<=6?t:0}
 function cleanModes(m){const out={};if(!m||typeof m!=='object'||Array.isArray(m))return out;for(const k of Object.keys(m).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Object.prototype.hasOwnProperty.call(MODES,m[k])).sort().slice(-120))out[k]=m[k];return out}
-function load(){try{const o=JSON.parse(root.localStorage.getItem(STORE)||'{}');return {planWeeks:planWeeks(),pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),photoMonths:Array.isArray(o.photoMonths)?o.photoMonths.filter(m=>/^\d{4}-\d{2}$/.test(m)).slice(-120):[]}}catch(e){return {planWeeks:[],modes:{},photoMonths:[]}}}
-function save(o){try{root.localStorage.setItem(STORE,JSON.stringify({photoMonths:o.photoMonths,pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes)}))}catch(e){}}
+function load(){try{const o=JSON.parse(root.localStorage.getItem(STORE)||'{}');return {planWeeks:planWeeks(),pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),seenTier:cleanTier(o.seenTier),photoMonths:Array.isArray(o.photoMonths)?o.photoMonths.filter(m=>/^\d{4}-\d{2}$/.test(m)).slice(-120):[]}}catch(e){return {planWeeks:[],modes:{},seenTier:0,photoMonths:[]}}}
+function save(o){try{root.localStorage.setItem(STORE,JSON.stringify({photoMonths:o.photoMonths,pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),seenTier:cleanTier(o.seenTier)}))}catch(e){}}
 function recordPhoto(){const o=load(),m=key(new Date()).slice(0,7);if(!o.photoMonths.includes(m)){o.photoMonths.push(m);save(o);notify()}}
 function pause(reason,to){const o=load(),t=key(new Date());if(activePause(o.pauses,t))return false;const end=okDate(to)&&to.slice(0,10)>=t?to.slice(0,10):null;o.pauses.push({from:t,to:end,reason:REASONS.includes(reason)?reason:'other'});save(o);notify();return true}
 function resume(){const o=load(),t=key(new Date()),y=addDays(t,-1);o.pauses=o.pauses.filter(p=>!(p.from<=t&&(!p.to||p.to>=t)&&p.from>=t)).map(p=>(p.from<=t&&(!p.to||p.to>=t))?Object.assign({},p,{to:y}):p);save(o);notify()}
+function getSeenTier(){return load().seenTier}
+function setSeenTier(t){const o=load();o.seenTier=cleanTier(t);save(o)}
 function getMode(now){const o=load(),t=typeof now==='string'?now:key(now||new Date()),ws=weekStart(t),nm=addDays(ws,7),cur=modeFor(o.modes,ws);return {mode:cur,pending:o.modes[nm]&&o.modes[nm]!==cur?o.modes[nm]:null}}
 /* Any change takes effect next Monday, so a week is always judged by the pace it started with. Choosing the current pace cancels a pending change. */
 function setMode(mode,now){if(!Object.prototype.hasOwnProperty.call(MODES,mode))return null;const o=load(),t=typeof now==='string'?now:key(now||new Date()),ws=weekStart(t),nm=addDays(ws,7),cur=modeFor(o.modes,ws),modes={};for(const k of Object.keys(o.modes))if(k<=ws)modes[k]=o.modes[k];let when='now';if(mode!==cur){modes[nm]=mode;when='next'}o.modes=modes;save(o);notify();return {mode,when,week:ws}}
 function notify(){try{root.document.dispatchEvent(new root.CustomEvent('bloom-training-xp',{detail:{mission:true}}))}catch(e){}}
 function bonus(state){return compute(state,load()).total}
 function status(state){return compute(state,load())}
-const api={TARGET,MODES,MODE_ORDER,setMode,getMode,XP,BOSS_TARGET,MIN_DINNERS,weekStart,compute,bonus,status,notify,recordPhoto,load,pause,resume};
+const api={TARGET,MODES,MODE_ORDER,setMode,getMode,getSeenTier,setSeenTier,XP,BOSS_TARGET,MIN_DINNERS,weekStart,compute,bonus,status,notify,recordPhoto,load,pause,resume};
 const C=root.BloomCore;
 if(C&&typeof C.trainingXP==='function'&&!C.__missionsPatched){
   const base=C.trainingXP;
