@@ -14,7 +14,7 @@ function setSkip(){try{localStorage.setItem(SK,JSON.stringify({checkSkip:todayKe
 function ageText(iso){if(!iso)return 'never confirmed';const d=Math.floor((Date.now()-Date.parse(iso))/864e5);return d<1?'today':d===1?'1 day ago':d+' days ago'}
 function doubtful(st){
   const items=Array.isArray(st.stockItems)?st.stockItems:[];
-  return items.filter(s=>s&&s.id&&s.name&&(!s.updated||Date.now()-Date.parse(s.updated)>STALE||(!s.level&&s.amount==null)))
+  return items.filter(s=>s&&s.id&&s.name&&(!s.updated||Date.now()-Date.parse(s.updated)>STALE))
     .sort((a,b)=>(Date.parse(a.updated)||0)-(Date.parse(b.updated)||0)).slice(0,MAXLIST)}
 function nextStep(){
   const st=readState(),P=window.LevelUpPlan;
