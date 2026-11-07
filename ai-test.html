@@ -24,7 +24,7 @@ $('go').onclick=async()=>{
  $('go').disabled=true;st.textContent='Working...';const t0=Date.now();
  try{
   const images=[];for(const f of Array.from($('files').files).slice(0,4))images.push(await shrink(f));
-  const r=await fetch(URL_+'/functions/v1/ai-assist',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+s.access_token},body:JSON.stringify({task:$('task').value,text:$('text').value,images})});
+  const r=await fetch(URL_+'/functions/v1/ai-assist',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+s.access_token},body:JSON.stringify({task:$('task').value,text:$('text').value,images}),signal:AbortSignal.timeout(150000)});
   const j=await r.json();
   st.textContent=(r.ok?'Done':'Error '+r.status)+' in '+((Date.now()-t0)/1000).toFixed(1)+' s'+(j.model?' ('+j.model+')':'');
   out.textContent=JSON.stringify(j.parsed||j.text||j,null,2)+(j.usage?'\n\nusage: '+JSON.stringify(j.usage):'');
