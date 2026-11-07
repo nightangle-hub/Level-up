@@ -19,7 +19,7 @@ const URL_='https://rogzuvlaoqjqhwnqoipk.supabase.co',KEY='sb_publishable_y0DB7I
 const $=id=>document.getElementById(id);
 function session(){try{const m=JSON.parse(localStorage.getItem('raikiba-sync-meta-v1')||'null');return m&&m.session}catch(e){return null}}
 function shrink(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res({mime:'image/jpeg',data:c.toDataURL('image/jpeg',0.82).split(',')[1]})};img.onerror=rej;img.src=window.URL.createObjectURL(file)})}
-$('copy').onclick=()=>{navigator.clipboard.writeText($('out').textContent);$('status').textContent='Copied'};
+$('copy').onclick=()=>{navigator.clipboard.writeText($('status').textContent+'\n'+$('out').textContent.slice(0,6000));$('status').textContent='Copied'};
 $('go').onclick=async()=>{
  const s=session();const st=$('status'),out=$('out');out.textContent='';
  if(!s){st.textContent='Not signed in. Sign in on RaiKiba Settings first, then reload this page.';return}
