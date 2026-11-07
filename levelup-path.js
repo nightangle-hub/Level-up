@@ -54,10 +54,14 @@ function renderSheet(){
   if(!sheet)return;const st=readState(),d=doubtful(st);
   const rows=d.map(s=>{const cur=String(s.level||'');return '<div class="lpc-row"><b>'+esc(s.name)+'</b><small>'+esc(cur?cur.charAt(0).toUpperCase()+cur.slice(1):'Level unknown')+', '+esc(ageText(s.updated))+'</small><div class="lpc-chips" role="group" aria-label="Amount of '+esc(s.name)+'">'+['plenty','some','low'].map(l=>'<button type="button" data-path-level="'+l+'" data-id="'+esc(s.id)+'" aria-pressed="'+(cur===l)+'"'+(cur===l?' class="lpc-primary"':'')+'>'+l.charAt(0).toUpperCase()+l.slice(1)+'</button>').join('')+'</div></div>'}).join('');
   sheet.innerHTML='<div class="lpc-in"><h1>Check your stock</h1><p>Only items that are unknown or 14+ days old. Tap a level to confirm it. Anything you skip stays as is.</p>'+(rows||'<p>All checked. Nothing else needs confirming.</p>')+'<div class="lpc-actions"><button type="button" class="lpc-primary" data-path-close>'+(d.length?'Close':'Done')+'</button>'+(d.length?'<button type="button" data-path-skip>Skip for today</button>':'')+'</div></div>'}
+function themeSheet(){
+  const src=document.querySelector('.app')||document.body,cs=getComputedStyle(src);
+  ['--bg','--card','--soft','--text','--muted','--border','--accent'].forEach(v=>{const x=cs.getPropertyValue(v);if(x)sheet.style.setProperty(v,x.trim())});
+  sheet.style.background=cs.getPropertyValue('--bg').trim()||'#1a2720';sheet.style.color=cs.getPropertyValue('--text').trim()||'#f4f0e6'}
 function openSheet(){
   css();lastFocus=document.activeElement;
   if(!sheet){sheet=document.createElement('div');sheet.id='luCheck';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','Check your stock')}
-  document.body.appendChild(sheet);renderSheet();const c=sheet.querySelector('[data-path-close]');if(c)c.focus()}
+  themeSheet();document.body.appendChild(sheet);renderSheet();const c=sheet.querySelector('[data-path-close]');if(c)c.focus()}
 function closeSheet(){if(sheet&&sheet.parentNode)sheet.parentNode.removeChild(sheet);if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}setTimeout(inject,0)}
 function setLevel(id,level){
   const app=document.getElementById('app');if(!app)return;
