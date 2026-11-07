@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>RaiKiba AI test</title>
+<style>body{margin:0;background:#14181a;color:#e8eee9;font:16px system-ui,sans-serif;padding:20px;max-width:640px;margin:auto}
+label{display:block;margin:14px 0 6px;font-weight:600}select,textarea,input,button{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #2b3338;background:#1d2326;color:#e8eee9;font:inherit}
+button{background:#9bbf9f;color:#14181a;font-weight:700;border:0;margin-top:14px;min-height:48px}pre{white-space:pre-wrap;background:#1d2326;border:1px solid #2b3338;border-radius:10px;padding:12px;font-size:13px}.m{color:#a3b1a9;font-size:13px}</style></head>
+<body><h1>RaiKiba AI test</h1>
+<p class="m">Private test page. Uses your RaiKiba sign in. Nothing here saves to stock.</p>
+<label for="task">Task</label>
+<select id="task"><option value="receipt">Read a receipt</option><option value="match">Match receipt to table photo (add both)</option><option value="recipe">Recipe from pasted text</option><option value="chat">Ask about stock (paste stock list)</option></select>
+<label for="files">Photos (up to 4)</label><input id="files" type="file" accept="image/*" multiple>
+<label for="text">Text</label><textarea id="text" rows="6" placeholder="Recipe text, stock list, or a question"></textarea>
+<button id="go">Send</button>
+<p class="m" id="status" role="status"></p><pre id="out"></pre>
+<script>
+const URL_='https://rogzuvlaoqjqhwnqoipk.supabase.co',KEY='sb_publishable_y0DB7IhtAvpHSGxtI3YKUA_MGAW0gTD';
+const $=id=>document.getElementById(id);
+function session(){try{const m=JSON.parse(localStorage.getItem('raikiba-sync-meta-v1')||'null');return m&&m.session}catch(e){return null}}
+function shrink(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1600/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res({mime:'image/jpeg',data:c.toDataURL('image/jpeg',0.82).split(',')[1]})};img.onerror=rej;img.src=window.URL.createObjectURL(file)})}
+$('go').onclick=async()=>{
+ const s=session();const st=$('status'),out=$('out');out.textContent='';
+ if(!s){st.textContent='Not signed in. Sign in on RaiKiba Settings first, then reload this page.';return}
+ if(s.expires_at-Date.now()/1000<30){st.textContent='Session expired. Open RaiKiba, Settings, tap Sync now, then reload this page.';return}
+ $('go').disabled=true;st.textContent='Working...';const t0=Date.now();
+ try{
+  const images=[];for(const f of Array.from($('files').files).slice(0,4))images.push(await shrink(f));
+  const r=await fetch(URL_+'/functions/v1/ai-assist',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+s.access_token},body:JSON.stringify({task:$('task').value,text:$('text').value,images})});
+  const j=await r.json();
+  st.textContent=(r.ok?'Done':'Error '+r.status)+' in '+((Date.now()-t0)/1000).toFixed(1)+' s'+(j.model?' ('+j.model+')':'');
+  out.textContent=JSON.stringify(j.parsed||j.text||j,null,2)+(j.usage?'\n\nusage: '+JSON.stringify(j.usage):'');
+ }catch(e){st.textContent='Failed: '+e.message}
+ $('go').disabled=false};
+</script></body></html>
