@@ -17,16 +17,14 @@ function doubtful(st){
   return items.filter(s=>s&&s.id&&s.name&&(!s.updated||Date.now()-Date.parse(s.updated)>STALE))
     .sort((a,b)=>(Date.parse(a.updated)||0)-(Date.parse(b.updated)||0)).slice(0,MAXLIST)}
 function nextStep(){
-  const st=readState(),P=window.LevelUpPlan;
-  const planned=P&&P.count?P.count(P.monday(todayKey())):0,min=P&&P.MIN?P.MIN:3;
-  if(planned<min)return {n:1,label:'Plan dinners',attr:'data-plan-open="0"',why:planned+' of '+min+' dinners planned'};
+  const st=readState();
   const d=doubtful(st);
-  if(d.length&&!skippedToday())return {n:2,label:'Check stock ('+d.length+')',attr:'data-path-check="1"',why:d.length+' item'+(d.length===1?'':'s')+' to confirm'};
+  if(d.length&&!skippedToday())return {n:1,label:'Check stock ('+d.length+')',attr:'data-path-check="1"',why:d.length+' item'+(d.length===1?'':'s')+' to confirm'};
   const list=Array.isArray(st.shoppingItems)?st.shoppingItems:[],ticked=st.shoppingChecked||{};
-  if(!list.length)return {n:3,label:'Shop for this plan',attr:'data-plan-open="0"',why:'Build your shopping list'};
+  if(!list.length)return {n:2,label:'Pick a meal',attr:'data-action="open" data-view="dinner"',why:'Choose from what you have, or add to shopping list'};
   const left=list.filter((_,i)=>!ticked[i]).length;
-  if(left)return {n:3,label:'Open shopping list',attr:'data-action="open" data-view="groceries"',why:left+' item'+(left===1?'':'s')+' to buy'};
-  return {n:4,label:'Add a grocery shop',attr:'data-action="open" data-view="receipt-scan"',why:'Save what you bought'}}
+  if(left)return {n:2,label:'Open shopping list',attr:'data-action="open" data-view="groceries"',why:left+' item'+(left===1?'':'s')+' to buy'};
+  return {n:3,label:'Add a grocery shop',attr:'data-action="open" data-view="receipt-scan"',why:'Save what you bought'}}
 function dedupeChips(){
   const nav=document.querySelector('.meals-page .meal-chips');if(!nav)return;const a=nextStep().attr||'';
   nav.querySelectorAll('.meal-chip').forEach(c=>{const dup=(a.indexOf('data-plan-open')>-1&&c.hasAttribute('data-plan-open'))||(a.indexOf('data-view="groceries"')>-1&&c.getAttribute('data-view')==='groceries');const v=dup?'none':'';if(c.style.display!==v)c.style.display=v})}
@@ -40,18 +38,12 @@ function css(){if(document.getElementById('luPathStyle'))return;const s=document
 '#luCheck button{font:inherit;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}#luCheck button.lpc-primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700}#luCheck .lpc-actions{display:flex;gap:10px;margin-top:16px}#luCheck .lpc-actions button{flex:1}';
 document.head.appendChild(s)}
 function cardHTML(){
-  const s=nextStep(),L=['Plan','Check','Shop','Save'];
+  const s=nextStep(),L=['Check','Shop','Save'];
   return '<section class="lup-path" id="luPathCard" aria-label="Food path"><div class="lpp-steps">'+L.map((l,i)=>'<span class="lpp-s'+(i+1===s.n?' on':i+1<s.n?' done':'')+'"><span class="lpp-c">'+(i+1<s.n?'&#10003;':i+1)+'</span>'+l+'</span>').join('')+'</div><p class="lpp-why">'+esc(s.why)+'</p><button type="button" class="lpp-go" '+s.attr+'>'+esc(s.label)+'</button></section>'}
 let lastSig='';
 function inject(){
   const page=document.querySelector('.meals-page');
-  if(!page){
-    const c=document.getElementById('content'),feat=c&&c.querySelector('.concept-hero')&&c.querySelector('.concept-feature');
-    if(!feat){return}
-    css();const have=document.getElementById('luPathCard'),html=cardHTML();
-    if(have&&have.nextElementSibling===feat){if(lastSig!==html){lastSig=html;have.outerHTML=html}return}
-    if(have)have.remove();
-    lastSig=html;const t=document.createElement('template');t.innerHTML=html;feat.parentNode.insertBefore(t.content.firstChild,feat);return}
+  if(!page){const have=document.getElementById('luPathCard');if(have)have.remove();return}
   css();dedupeChips();const nav=page.querySelector('.meal-chips'),have=document.getElementById('luPathCard');
   const html=cardHTML();
   if(have&&have.parentNode===page){if(lastSig!==html){lastSig=html;have.outerHTML=html}return}

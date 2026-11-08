@@ -63,11 +63,28 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
     assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance']);
   });
-  await ok('Today shows the food path card above training', async () => {
+  await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
+    await page.waitForTimeout(700);
+    const o = await page.evaluate(() => {
+      const chips = [...document.querySelectorAll('[data-action="care-tap"]')].length;
+      const hasOffline = !!document.querySelector('.today-offline, .today-offline-card');
+      const hasDinnerCard = !!document.querySelector('.today-dinner');
+      return { chips, hasOffline, hasDinnerCard };
+    });
+    assert(o.chips >= 8, 'Kind to self chips missing (' + o.chips + ')');
+    assert(o.hasOffline, 'offline mode section missing on Today');
+    assert(!o.hasDinnerCard, 'dinner card should have moved off Today');
+  });
+  await ok('Food tab is the Pick a meal screen with Hot/Cold shortcuts', async () => {
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]')?.click());
     await page.waitForTimeout(600);
-    const o = await page.evaluate(() => { const c = document.getElementById('luPathCard'), f = document.querySelector('#content .concept-feature'); return !!c && !!f && (c.compareDocumentPosition(f) & 4) > 0; });
-    assert(o, 'path card missing or below training');
+    const o = await page.evaluate(() => {
+      const presets = [...document.querySelectorAll('[data-action="mood-preset"]')].map(b => b.textContent.trim());
+      return { hot: presets.some(t => /Hot day/i.test(t)), cold: presets.some(t => /Cold day/i.test(t)), heading: !!document.querySelector('#content h1') && /What do you feel like/i.test(document.querySelector('#content h1').textContent) };
+    });
+    assert(o.hot && o.cold, 'Hot/Cold day shortcuts missing');
+    assert(o.heading, 'Pick a meal title not "What do you feel like?"');
   });
   await ok('New recipe shows the three way strip and Back returns to Meals', async () => {
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click());
