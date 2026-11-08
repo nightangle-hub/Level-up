@@ -45,7 +45,7 @@ function html(){
   const state=read('bloom-zen-v1')||{},t=today(),st=M.status(state);
   const look=lookInfo(t),train=trainingInfo(state,t),meal=mealInfo(state,t),plan=planInfo(t);
   let xp={level:1,total:0};try{xp=window.BloomCore.trainingXP(state)}catch(e){}
-  const tier=rankFor(xp.level),shown=st.rows.filter(r=>r.id==='clear'?tier>=2:r.id==='fresh'?tier>=2:true);
+  const tier=rankFor(xp.level),shown=st.rows.filter(r=>r.id==='clear'?tier>=2:(r.id==='stock'||r.id==='care')?tier>=1:true);
   const cleared=shown.filter(r=>r.done&&r.id!=='clear').map(r=>r.label),gate=tier>=2&&st.rows.find(r=>r.id==='clear').done;
   const rows=shown.map(r=>'<li class="lut-row'+(r.done?' done':'')+'"><span class="lut-name"><b>'+esc(r.id==='clear'?'Clear':r.label)+'</b><small>'+esc(r.detail)+'</small></span><span class="lut-prog">'+(r.id==='clear'?'':bar(Math.min(r.have,r.target),r.target))+'</span><span class="lut-xp">'+(r.done?'Done':'+'+r.xp+' XP')+'</span></li>').join('');
   const btn=(label,view)=>'<button type="button" class="lut-go" data-action="open" data-view="'+view+'">'+esc(label)+'</button>';
