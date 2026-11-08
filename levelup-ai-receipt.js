@@ -61,7 +61,7 @@ async function readWithAI(file){
   }catch(e){st.busy=false;st.msg=(e&&e.name==='TimeoutError')?'The AI took too long. Try again, or use ChatGPT below.':(e&&(e.name==='TypeError'||/failed to fetch|network|load failed/i.test(e.message||'')))?'Could not reach the AI. Check your connection, or use ChatGPT below.':(e&&e.message)||'Something went wrong. Use ChatGPT below.';draw()}}
 function html(){
   const dis=st.busy?' disabled':'';
-  return '<div class="detail" id="luAiReceipt"><h2 style="margin:0 0 6px">Read with AI</h2><p class="capture-note">Choose a receipt photo. The AI reads it and fills the review for you. Nothing is saved until you confirm.</p><label class="subtle-button" for="luAiFile" style="display:inline-block"'+dis+'>'+(st.busy?'Reading...':'Read with AI')+'</label><input id="luAiFile" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"'+dis+'>'+(st.msg?'<p class="capture-note" role="status">'+esc(st.msg)+'</p>':'')+'</div>'}
+  return '<div class="detail" id="luAiReceipt"><h2 style="margin:0 0 6px">Read with AI</h2><p class="capture-note">Choose a receipt photo. The AI reads it and fills the review for you. Nothing is saved until you confirm.</p><p class="capture-note">The photo goes to Google to be read. Cover any card or loyalty numbers first.</p><label class="subtle-button" for="luAiFile" style="display:inline-block"'+dis+'>'+(st.busy?'Reading...':'Read with AI')+'</label><input id="luAiFile" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"'+dis+'>'+(st.msg?'<p class="capture-note" role="status">'+esc(st.msg)+'</p>':'')+'</div>'}
 let lastSig='';
 function draw(){
   const host=document.querySelector('.receipt-scanner');if(!host)return;
