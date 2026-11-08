@@ -1676,6 +1676,7 @@ const beforeNewRecipeStrip=detailView;detailView=function(v){let html=beforeNewR
  if(on===undefined||(v==='recipe-editor'&&editingId))return html;
  const items=[['Get an idea','data-action="open" data-view="dinner-request"'],['Paste a recipe','data-action="dinner-import"'],['Type or AI fill','data-action="new-recipe"']];
  const strip='<nav class="meal-chips new-recipe-strip" aria-label="Ways to add a recipe">'+items.map((x,i)=>'<button type="button" class="meal-chip'+(i===on?' on':'')+'" '+x[1]+(i===on?' aria-current="page"':'')+'>'+x[0]+'</button>').join('')+'</nav>';
+ if(v==='recipe-editor')html=html.replace(/<p class="hint">Ask ChatGPT for a revision[^<]*<\/p><div class="action-row"><button class="subtle-button" data-action="recipe-prompt">[\s\S]*?<\/div>/,'');
  return html.replace('</h1>','</h1>'+strip)};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.new-recipe-strip [data-action]');if(!b)return;const to={'new-recipe':'recipe-editor','dinner-import':'recipe-paste'}[b.dataset.action]||b.dataset.view;if(to&&['dinner-request','recipe-paste','recipe-editor'].includes(mealCurrent.view))mealCurrent.view=to},true);
 

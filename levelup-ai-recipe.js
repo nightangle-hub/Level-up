@@ -41,13 +41,13 @@ async function run(file){
     const s=await freshSession(),images=file?[await shrink(file)]:[];
     const r=await fetch(URL_+'/functions/v1/ai-assist',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+s.access_token},body:JSON.stringify({task:'recipe',text:text||'Read this recipe.',images}),signal:AbortSignal.timeout(120000)});
     const j=await r.json().catch(()=>({}));
-    if(r.status===429)throw new Error('AI limit reached for now. Try again in a minute, or use the ChatGPT buttons above.');
-    if(!r.ok||!j.parsed)throw new Error('The AI did not return a readable answer. Try again, or use the ChatGPT buttons above.');
+    if(r.status===429)throw new Error('AI limit reached for now. Try again in a minute, or use Paste a recipe or Get an idea above.');
+    if(!r.ok||!j.parsed)throw new Error('The AI did not return a readable answer. Try again, or use Paste a recipe or Get an idea above.');
     const f=toForm(j.parsed);
     if(!setField('recTitle',f.title)||!setField('recIngredients',f.ingredients)||!setField('recSteps',f.steps))throw new Error('Open New recipe and try again.');
     setField('recServings',f.servings);setField('recNotes',f.notes);
     st.busy=false;st.text='';st.msg='Done. Check the name, amounts and method below, then tap Save recipe. Nothing is saved yet.'+(f.warn?' '+f.warn:'');draw()
-  }catch(e){st.busy=false;st.msg=(e&&e.name==='TimeoutError')?'The AI took too long. Try again, or use the ChatGPT buttons above.':(e&&(e.name==='TypeError'||/failed to fetch|network|load failed/i.test(e.message||'')))?'Could not reach the AI. Check your connection, or use the ChatGPT buttons above.':(e&&e.message)||'Something went wrong. Use the ChatGPT buttons above.';draw()}}
+  }catch(e){st.busy=false;st.msg=(e&&e.name==='TimeoutError')?'The AI took too long. Try again, or use Paste a recipe or Get an idea above.':(e&&(e.name==='TypeError'||/failed to fetch|network|load failed/i.test(e.message||'')))?'Could not reach the AI. Check your connection, or use Paste a recipe or Get an idea above.':(e&&e.message)||'Something went wrong. Use Paste a recipe or Get an idea above.';draw()}}
 function html(){
   const dis=st.busy?' disabled':'';
   return '<div class="detail" id="luAiRecipe"><h2 style="margin:0 0 6px">Fill with AI</h2><p class="capture-note">Paste a recipe or choose a photo. The AI fills the form below. Nothing is saved until you tap Save recipe.</p><textarea id="luAiRecipeText" rows="4" maxlength="20000" placeholder="Paste a recipe here" aria-label="Recipe text"'+dis+'>'+esc(st.text)+'</textarea><div class="action-row"><button type="button" class="subtle-button" id="luAiRecipeGo"'+dis+'>'+(st.busy?'Reading...':'Fill from text')+'</button><label class="subtle-button" for="luAiRecipeFile" style="display:inline-flex"'+dis+'>Use a photo</label><input id="luAiRecipeFile" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"'+dis+'></div>'+(st.msg?'<p class="capture-note" role="status">'+esc(st.msg)+'</p>':'')+'</div>'}
