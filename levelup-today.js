@@ -50,9 +50,7 @@ function html(){
   const rows=shown.map(r=>'<li class="lut-row'+(r.done?' done':'')+'"><span class="lut-name"><b>'+esc(r.id==='clear'?'Clear':r.label)+'</b><small>'+esc(r.detail)+'</small></span><span class="lut-prog">'+(r.id==='clear'?'':bar(Math.min(r.have,r.target),r.target))+'</span><span class="lut-xp">'+(r.done?'Done':'+'+r.xp+' XP')+'</span></li>').join('');
   const btn=(label,view)=>'<button type="button" class="lut-go" data-action="open" data-view="'+view+'">'+esc(label)+'</button>';
   const item=(k,title,detail,ok,go)=>'<li class="lut-item'+(ok?' done':'')+'"><span class="lut-k">'+k+'</span><span class="lut-t"><b>'+esc(title)+'</b><small>'+esc(detail)+'</small></span>'+go+'</li>';
-  let dinner;
-  if(meal.cooked)dinner=item('Dinner','Cooked: '+meal.cooked,'Counts toward Cook.',true,btn('Meals','dinner'));
-  else dinner=item('Dinner','What do you feel like?','Pick a meal from what you have, or add a receipt.',false,btn('Pick a meal','dinner'));
+  const dinner=meal.cooked?item('Dinner','Cooked: '+meal.cooked,'Counts toward Cook.',true,btn('Meals','dinner')):'';
   return '<section id="luToday" class="lut"><style>'+
   '#luToday{margin:18px 0}#luToday h2{font:400 22px/1.2 Georgia,serif;margin:0 0 4px}#luToday .micro{margin:0 0 8px}#luToday .lut-card{border:1px solid var(--border);background:var(--card);border-radius:18px;padding:18px 18px 10px;margin:0 0 14px}#luToday ul{list-style:none;margin:0;padding:0}'+
   '#luToday li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border)}#luToday li:first-child{border-top:0}#luToday .lut-name,#luToday .lut-t{flex:1;min-width:0;display:flex;flex-direction:column}#luToday small{color:var(--muted);font-size:12px;line-height:1.35}'+
@@ -67,9 +65,7 @@ function html(){
   (gate?'<p class="lut-sys">Clear. All quests complete.</p>':cleared.length?'<p class="lut-sys">Quest cleared: '+esc(cleared.join(', '))+'.</p>':'')+
   '<ul>'+rows+'</ul>'+
   (tier>=4?'<details class="lut-bonus"><summary>Bonus quests</summary><ul><li class="lut-row'+(st.photoDone?' done':'')+'"><span class="lut-name"><b>Monthly photo check</b><small>Save this month\'s baseline photo in Appearance</small></span><span class="lut-xp">'+(st.photoDone?'Done':'+10 XP')+'</span></li>'+(tier>=5?bossRow(st):'')+'</ul></details>':'')+'</div>'+
-  '<div class="lut-card"><p class="micro">TONIGHT</p><ul>'+
-  dinner+
-  '</ul></div></section>'}
+  (dinner?'<div class="lut-card"><p class="micro">TONIGHT</p><ul>'+dinner+'</ul></div>':'')+'</section>'}
 function inject(){
   const c=document.getElementById('content');if(!c)return;
   const anchor=c.querySelector('.concept-feature');if(!anchor||!c.querySelector('.concept-hero'))return;
