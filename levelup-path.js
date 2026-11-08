@@ -44,7 +44,14 @@ function cardHTML(){
   return '<section class="lup-path" id="luPathCard" aria-label="Food path"><div class="lpp-steps">'+L.map((l,i)=>'<span class="lpp-s'+(i+1===s.n?' on':i+1<s.n?' done':'')+'"><span class="lpp-c">'+(i+1<s.n?'&#10003;':i+1)+'</span>'+l+'</span>').join('')+'</div><p class="lpp-why">'+esc(s.why)+'</p><button type="button" class="lpp-go" '+s.attr+'>'+esc(s.label)+'</button></section>'}
 let lastSig='';
 function inject(){
-  const page=document.querySelector('.meals-page');if(!page)return;
+  const page=document.querySelector('.meals-page');
+  if(!page){
+    const c=document.getElementById('content'),feat=c&&c.querySelector('.concept-hero')&&c.querySelector('.concept-feature');
+    if(!feat){return}
+    css();const have=document.getElementById('luPathCard'),html=cardHTML();
+    if(have&&have.nextElementSibling===feat){if(lastSig!==html){lastSig=html;have.outerHTML=html}return}
+    if(have)have.remove();
+    lastSig=html;const t=document.createElement('template');t.innerHTML=html;feat.parentNode.insertBefore(t.content.firstChild,feat);return}
   css();dedupeChips();const nav=page.querySelector('.meal-chips'),have=document.getElementById('luPathCard');
   const html=cardHTML();
   if(have&&have.parentNode===page){if(lastSig!==html){lastSig=html;have.outerHTML=html}return}

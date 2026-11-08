@@ -59,6 +59,24 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const t = await page.locator('#app').innerText();
     assert(/Sync across devices/i.test(t) || /Settings/i.test(t), 'settings not shown');
   });
+  await ok('Today shows the food path card above training', async () => {
+    await page.evaluate(() => document.querySelector('[data-page="today"]').click());
+    await page.waitForTimeout(600);
+    const o = await page.evaluate(() => { const c = document.getElementById('luPathCard'), f = document.querySelector('#content .concept-feature'); return !!c && !!f && (c.compareDocumentPosition(f) & 4) > 0; });
+    assert(o, 'path card missing or below training');
+  });
+  await ok('New recipe shows the three way strip and Back returns to Meals', async () => {
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click());
+    await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(e => e.innerText.trim().startsWith('New recipe')).click());
+    await page.waitForTimeout(500);
+    for (const t of ['Paste a recipe', 'Type or AI fill']) {
+      await page.evaluate(t => [...document.querySelectorAll('#content .new-recipe-strip button')].find(e => e.innerText.trim() === t).click(), t);
+      await page.waitForTimeout(400);
+    }
+    const back = await page.evaluate(() => [...document.querySelectorAll('#content button')].find(e => /^\u2190/.test(e.innerText)).innerText);
+    assert(/Meals/.test(back), 'back label was ' + back);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
