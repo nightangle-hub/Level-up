@@ -59,6 +59,10 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const t = await page.locator('#app').innerText();
     assert(/Sync across devices/i.test(t) || /Settings/i.test(t), 'settings not shown');
   });
+  await ok('bottom bar is Today, Food, Train, Appearance (no Week)', async () => {
+    const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
+    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance']);
+  });
   await ok('Today shows the food path card above training', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
     await page.waitForTimeout(600);
