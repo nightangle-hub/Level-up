@@ -244,10 +244,21 @@
     return new Date(iso).toLocaleDateString();
   }
   const dot = c => '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + c + ';margin-right:7px"></span>';
+  // ---- Storage meter (read only) -------------------------------------------
+  const CAP = 2 * 1024 * 1024;
+  function usedBytes() { try { const v = root.localStorage.getItem('bloom-zen-v1'); return v ? new Blob([v]).size : 0; } catch (e) { return 0; } }
+  function meterHTML() {
+    const b = usedBytes(); if (!b) return '';
+    const pct = Math.round(b / CAP * 100), mb = b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB', amber = pct >= 80;
+    let h = '<p class="small" style="margin:0 0 10px">' + dot(amber ? '#e0b36a' : '#9bbf9f') + 'Saved data: ' + mb + ' of 2 MB (' + pct + ' percent)</p>';
+    if (amber) h += '<p class="hint" role="status">Getting full. Remove a few old recipe pictures or export a backup before saving pauses.</p>';
+    if (!meta.session) h += '<p class="hint">Sign in below so a copy is kept in the cloud, in case your phone clears this app.</p>';
+    return h;
+  }
   function cardHTML() {
     const w = ui.working ? 'disabled' : '';
     const field = 'style="margin:8px 0;width:100%;padding:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:9px"';
-    let h = '<h2 style="margin:0 0 6px">Sync across devices</h2>';
+    let h = '<h2 style="margin:0 0 6px">Sync across devices</h2>' + meterHTML();
     if (!meta.session) {
       h += '<p class="hint">Sign in once on each device. Only your RaiKiba data is stored, in your own Supabase project.</p>';
       h += '<label for="rkSyncEmail">Email</label><input id="rkSyncEmail" data-sync-field="email" type="email" autocomplete="username" value="' + esc(ui.email) + '" ' + field + '><label for="rkSyncPw">Password</label><input id="rkSyncPw" data-sync-field="password" type="password" autocomplete="current-password" value="' + esc(ui.password) + '" ' + field + '><button class="subtle-button" data-sync="signin" ' + w + '>Sign in</button>';
@@ -277,7 +288,7 @@
       raf = null;
       const el = root.document.getElementById('raikibaSyncCard');
       if (!el) { lastSig = ''; return; }
-      const sig = JSON.stringify([ui.status, ui.message, ui.working, !!meta.session, meta.lastSyncedAt, ui.conflict, ui.versions]);
+      const sig = JSON.stringify([ui.status, ui.message, ui.working, !!meta.session, meta.lastSyncedAt, ui.conflict, ui.versions, usedBytes()]);
       const typing = root.document.activeElement && el.contains(root.document.activeElement) && root.document.activeElement.tagName === 'INPUT';
       if (sig === lastSig && el.firstChild) return;
       if (typing && el.firstChild) return;
@@ -306,7 +317,10 @@
     mount();
   }
 
+  function keepStorage() { try { if (root.navigator && root.navigator.storage && root.navigator.storage.persist) root.navigator.storage.persist().catch(() => {}); } catch (e) {} }
+
   function init() {
+    keepStorage();
     if (root.addEventListener) {
       root.addEventListener('online', () => sync('online'));
       root.document && root.document.addEventListener('visibilitychange', () => { if (root.document.visibilityState === 'visible') sync('visible'); });
