@@ -1,12 +1,12 @@
 /* RaiKiba weekly missions. Mission XP is derived from existing records, so nothing here can drift out of sync.
    Move: 3 days with a training session or cardio, 30 XP. Cook: 2 days with a cooked meal, 10 XP.
-   Plan: save a weekly dinner plan of 3 or more dinners, 10 XP. Clear bonus: all three in one week, 10 XP.
+   Something different: cook a dish you have not made in the previous 3 weeks, 10 XP. Clear bonus: all three in one week, 10 XP.
    Monthly photo check: 10 XP per month. Personal best: 10 XP per exercise per week when you beat every earlier set.
    Monthly boss: train on 12 days in a calendar month, 30 XP. Streak: weeks with 3 move days; one missed week a month is forgiven (shield).
    Pauses (holiday, injury) are stored in levelup-missions-v1 and skip streak weeks and shrink the boss target. Weeks start on Monday. Looks and daily care earn no XP. */
 (function(root,factory){const api=factory(root);if(typeof module==='object')module.exports=api;else root.LevelUpMissions=api})(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
-const TARGET={move:3,cook:2,plan:1},XP={move:30,cook:10,plan:10,bonus:10,photo:10,pb:10,boss:30},BOSS_TARGET=12,REASONS=['holiday','injury','other'],
+const TARGET={move:3,cook:2,fresh:1},XP={move:30,cook:10,fresh:10,bonus:10,photo:10,pb:10,boss:30},BOSS_TARGET=12,REASONS=['holiday','injury','other'],FRESH_WINDOW_DAYS=21,
 MODES={easy:{label:'Easy',move:2,cook:1,blurb:'A gentler pace, steady progress'},normal:{label:'Normal',move:3,cook:2,blurb:'A balanced weekly challenge'},hard:{label:'Hard',move:4,cook:3,blurb:'Push further with bigger goals'},legendary:{label:'Legendary',move:5,cook:4,blurb:'For those ready to go all in'}},MODE_ORDER=['easy','normal','hard','legendary'];
 const pad=n=>String(n).padStart(2,'0');
 const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -14,20 +14,22 @@ const okDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}/.test(s);
 const parse=s=>{const[y,m,d]=s.slice(0,10).split('-').map(Number);return new Date(y,m-1,d)};
 function weekStart(s){const d=parse(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return key(d)}
 function localDay(v){if(!okDate(v))return null;if(v.length<=10)return v;const d=new Date(v);return isNaN(d)?v.slice(0,10):key(d)}
-function bucket(map,week,kind,day){if(!map[week])map[week]={move:new Set(),cook:new Set(),plan:new Set()};map[week][kind].add(day)}
+function bucket(map,week,kind,day){if(!map[week])map[week]={move:new Set(),cook:new Set(),fresh:new Set()};map[week][kind].add(day)}
+function normTitle(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
+function daysBetween(a,b){const da=parse(a),db=parse(b);return Math.round((db-da)/864e5)}
 function gather(state,extras,today){
   const weeks={};state=state||{};extras=extras||{};
   for(const e of state.trainingLogs||[]){if(!e||e.voided||!okDate(e.date)||e.date>today)continue;if(e.kind==='session'||e.kind==='cardio'||e.kind==='set')bucket(weeks,weekStart(e.date),'move',e.date)}
-  for(const m of state.cookedMeals||[]){if(!m||!okDate(m.date)||m.date>today)continue;bucket(weeks,weekStart(m.date),'cook',m.date)}
-  const thisWeek=weekStart(today);
-  for(const w of extras.planWeeks||[]){if(!okDate(w)||w>thisWeek)continue;bucket(weeks,weekStart(w),'plan',w.slice(0,10))}
+  const meals=(state.cookedMeals||[]).filter(m=>m&&okDate(m.date)&&m.date<=today).sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
+  const lastSeen=new Map();
+  for(const m of meals){bucket(weeks,weekStart(m.date),'cook',m.date);const k=normTitle(m.recipeTitle);if(!k)continue;const prev=lastSeen.get(k);if(!prev||daysBetween(prev,m.date)>=FRESH_WINDOW_DAYS)bucket(weeks,weekStart(m.date),'fresh',k+'|'+m.date);lastSeen.set(k,m.date)}
   return weeks}
 function weekResult(w,mode){
   const m=MODES[mode]||MODES.normal;
-  const have={move:w?w.move.size:0,cook:w?w.cook.size:0,plan:w?w.plan.size:0};
-  const done={move:have.move>=m.move,cook:have.cook>=m.cook,plan:have.plan>=TARGET.plan};
-  const clear=done.move&&done.cook&&done.plan;
-  const xp=(done.move?XP.move:0)+(done.cook?XP.cook:0)+(done.plan?XP.plan:0)+(clear?XP.bonus:0);
+  const have={move:w?w.move.size:0,cook:w?w.cook.size:0,fresh:w?w.fresh.size:0};
+  const done={move:have.move>=m.move,cook:have.cook>=m.cook,fresh:have.fresh>=TARGET.fresh};
+  const clear=done.move&&done.cook&&done.fresh;
+  const xp=(done.move?XP.move:0)+(done.cook?XP.cook:0)+(done.fresh?XP.fresh:0)+(clear?XP.bonus:0);
   return {have,done,clear,xp}}
 function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return key(d)}
 /* A week's mode is the most recent saved change on or before that Monday, otherwise Normal. Past weeks keep the mode they were played in. */
@@ -72,14 +74,13 @@ function compute(state,extras,now){
     rows:[
       {id:'move',label:'Move',detail:'Train or do cardio on '+cm.move+' days',have:cur.have.move,target:cm.move,xp:XP.move,done:cur.done.move},
       {id:'cook',label:'Cook',detail:'Cook '+cm.cook+(cm.cook===1?' meal':' meals on different days'),have:cur.have.cook,target:cm.cook,xp:XP.cook,done:cur.done.cook},
-      {id:'plan',label:'Plan',detail:'Save a plan of 3 or more dinners',have:cur.have.plan,target:TARGET.plan,xp:XP.plan,done:cur.done.plan},
+      {id:'fresh',label:'Something different',detail:'Cook a dish you haven\'t made in 3 weeks',have:cur.have.fresh,target:TARGET.fresh,xp:XP.fresh,done:cur.done.fresh},
       {id:'clear',label:'Clear bonus',detail:'Finish all three this week',have:cur.clear?1:0,target:1,xp:XP.bonus,done:cur.clear}]}}
-const STORE='levelup-missions-v1',PLAN_STORE='levelup-mealplan-v1',MIN_DINNERS=3;
-function planWeeks(){try{const o=JSON.parse(root.localStorage.getItem(PLAN_STORE)||'{}'),w=o.weeks||{};return Object.keys(w).filter(k=>okDate(k)&&w[k]&&w[k].days&&Object.keys(w[k].days).filter(d=>w[k].days[d]&&w[k].days[d].id).length>=MIN_DINNERS)}catch(e){return []}}
+const STORE='levelup-missions-v1',MIN_DINNERS=3;
 function cleanPauses(a){return (Array.isArray(a)?a:[]).filter(p=>p&&okDate(p.from)&&(p.to===null||p.to===undefined||okDate(p.to)&&p.to>=p.from)).map(p=>({from:p.from.slice(0,10),to:p.to?p.to.slice(0,10):null,reason:REASONS.includes(p.reason)?p.reason:'other'})).slice(-40)}
 function cleanTier(t){return Number.isInteger(t)&&t>=1&&t<=6?t:0}
 function cleanModes(m){const out={};if(!m||typeof m!=='object'||Array.isArray(m))return out;for(const k of Object.keys(m).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Object.prototype.hasOwnProperty.call(MODES,m[k])).sort().slice(-120))out[k]=m[k];return out}
-function load(){try{const o=JSON.parse(root.localStorage.getItem(STORE)||'{}');return {planWeeks:planWeeks(),pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),seenTier:cleanTier(o.seenTier),photoMonths:Array.isArray(o.photoMonths)?o.photoMonths.filter(m=>/^\d{4}-\d{2}$/.test(m)).slice(-120):[]}}catch(e){return {planWeeks:[],modes:{},seenTier:0,photoMonths:[]}}}
+function load(){try{const o=JSON.parse(root.localStorage.getItem(STORE)||'{}');return {pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),seenTier:cleanTier(o.seenTier),photoMonths:Array.isArray(o.photoMonths)?o.photoMonths.filter(m=>/^\d{4}-\d{2}$/.test(m)).slice(-120):[]}}catch(e){return {modes:{},seenTier:0,photoMonths:[]}}}
 function save(o){try{root.localStorage.setItem(STORE,JSON.stringify({photoMonths:o.photoMonths,pauses:cleanPauses(o.pauses),modes:cleanModes(o.modes),seenTier:cleanTier(o.seenTier)}))}catch(e){}}
 function recordPhoto(){const o=load(),m=key(new Date()).slice(0,7);if(!o.photoMonths.includes(m)){o.photoMonths.push(m);save(o);notify()}}
 function pause(reason,to){const o=load(),t=key(new Date());if(activePause(o.pauses,t))return false;const end=okDate(to)&&to.slice(0,10)>=t?to.slice(0,10):null;o.pauses.push({from:t,to:end,reason:REASONS.includes(reason)?reason:'other'});save(o);notify();return true}
