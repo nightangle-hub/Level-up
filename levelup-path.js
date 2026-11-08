@@ -27,6 +27,9 @@ function nextStep(){
   const left=list.filter((_,i)=>!ticked[i]).length;
   if(left)return {n:3,label:'Open shopping list',attr:'data-action="open" data-view="groceries"',why:left+' item'+(left===1?'':'s')+' to buy'};
   return {n:4,label:'Add a grocery shop',attr:'data-action="open" data-view="receipt-scan"',why:'Save what you bought'}}
+function dedupeChips(){
+  const nav=document.querySelector('.meals-page .meal-chips');if(!nav)return;const a=nextStep().attr||'';
+  nav.querySelectorAll('.meal-chip').forEach(c=>{const dup=(a.indexOf('data-plan-open')>-1&&c.hasAttribute('data-plan-open'))||(a.indexOf('data-view="groceries"')>-1&&c.getAttribute('data-view')==='groceries');const v=dup?'none':'';if(c.style.display!==v)c.style.display=v})}
 function css(){if(document.getElementById('luPathStyle'))return;const s=document.createElement('style');s.id='luPathStyle';s.textContent=
 '.lup-path{border:1px solid var(--border);background:var(--card);border-radius:18px;padding:14px 16px;margin:0 0 14px}.lup-path .lpp-steps{display:flex;justify-content:space-between;margin:0 0 12px}'+
 '.lup-path .lpp-s{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;font-size:11px;color:var(--muted)}.lup-path .lpp-c{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}'+
@@ -42,7 +45,7 @@ function cardHTML(){
 let lastSig='';
 function inject(){
   const page=document.querySelector('.meals-page');if(!page)return;
-  css();const nav=page.querySelector('.meal-chips'),have=document.getElementById('luPathCard');
+  css();dedupeChips();const nav=page.querySelector('.meal-chips'),have=document.getElementById('luPathCard');
   const html=cardHTML();
   if(have&&have.parentNode===page){if(lastSig!==html){lastSig=html;have.outerHTML=html}return}
   if(have)have.remove();

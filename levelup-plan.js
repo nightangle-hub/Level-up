@@ -15,12 +15,15 @@ function read(k){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null
 function readPlan(){const o=read(KEY);return o&&o.weeks&&typeof o.weeks==='object'?o:{weeks:{}}}
 function writePlan(o){try{const keys=Object.keys(o.weeks).sort();while(keys.length>16)delete o.weeks[keys.shift()];localStorage.setItem(KEY,JSON.stringify(o));return true}catch(e){return false}}
 function recipes(){const s=read('bloom-zen-v1');return ((s&&s.userRecipes)||[]).filter(r=>r&&r.id&&r.title).map(r=>({id:String(r.id),title:String(r.title),text:(String(r.title)+' '+(Array.isArray(r.ingredients)?r.ingredients.join(' '):'')).toLowerCase()}))}
+const STOP=new Set(['with','from','fresh','sliced','chopped','large','small','medium','optional','tsp','tbsp','cups','pinch','diced','minced','whole']);
+const toks=x=>new Set(String(x).toLowerCase().split(/[^a-z]+/).filter(w=>w.length>3&&!STOP.has(w)));
+function lastCooked(){const s=read('bloom-zen-v1'),m={};((s&&s.cookedMeals)||[]).forEach(c=>{if(c&&c.recipeId&&/^\d{4}-\d{2}-\d{2}$/.test(c.date||'')&&(!m[c.recipeId]||c.date>m[c.recipeId]))m[c.recipeId]=c.date});return m}
 function weekPlan(mon){const w=readPlan().weeks[mon];return (w&&w.days)||{}}
 function count(mon){return Object.values(weekPlan(mon)).filter(x=>x&&x.id).length}
 function dinnerFor(day){const x=weekPlan(monday(day))[day];return x&&x.id?x:null}
 function notify(){try{if(window.LevelUpMissions)window.LevelUpMissions.notify()}catch(e){}}
 
-let sheet=null,week=null,picked=[],query='',note='',offset=0,lastFocus=null;
+let sheet=null,sugg=null,week=null,picked=[],query='',note='',offset=0,lastFocus=null;
 function css(){if(document.getElementById('luPlanStyle'))return;const s=document.createElement('style');s.id='luPlanStyle';s.textContent=
 '#luPlan{position:fixed;inset:0;z-index:60;background:var(--bg);color:var(--text);overflow:auto;padding:max(18px,env(safe-area-inset-top)) 16px 40px}#luPlan .lup-in{max-width:520px;margin:0 auto}'+
 '#luPlan h1{font:400 28px/1.2 Georgia,serif;margin:6px 0 6px}#luPlan .micro{margin:0;color:var(--muted)}#luPlan p{color:var(--muted);font-size:14px;line-height:1.5;margin:0 0 14px}'+
@@ -30,6 +33,7 @@ function css(){if(document.getElementById('luPlanStyle'))return;const s=document
 '#luPlan .lup-card{border:1px solid var(--border);background:var(--card);border-radius:18px;padding:6px 16px;margin:0 0 14px}#luPlan .lup-actions{display:flex;gap:10px;flex-wrap:wrap}#luPlan .lup-actions button{flex:1}#luPlan .lup-note{min-height:20px;color:var(--accent);font-size:13px;margin:0 0 10px}'+
 '#luPlan .lup-search{width:100%;box-sizing:border-box;font:inherit;font-size:15px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--text);margin:0 0 12px}'+'#luPlan .lup-pick{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-top:1px solid var(--border);border-radius:0;padding:12px 4px;background:transparent}'+'#luPlan .lup-pick:first-child{border-top:0}#luPlan .lup-pick .tick{width:22px;height:22px;flex:none;border:1.5px solid var(--accent);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}'+'#luPlan .lup-pick.is-picked .tick{background:var(--accent);color:var(--bg)}#luPlan .lup-pick.is-picked{color:var(--accent)}#luPlan .lup-preview{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 12px}'+'#luPlan button[disabled]{opacity:.5;cursor:default}';document.head.appendChild(s)}
 function build(){
+  sugg=null;
   const head='<div class="lup-in"><div class="lup-top"><p class="micro">DINNER QUESTS</p><button type="button" data-plan-close aria-label="Close planner">Close</button></div>'+
   '<h1>Plan the week</h1><p>Pick up to '+MAX+' dinners. Saving '+MIN+' or more clears the weekly Plan quest (+10 XP). Dinners fill the week from Monday in the order you tap them. No penalties.</p>'+
   '<div class="lup-tabs" role="group" aria-label="Choose week"><button type="button" class="lup-tab'+(offset===0?' on':'')+'" data-plan-week="0" aria-pressed="'+(offset===0)+'">This week</button><button type="button" class="lup-tab'+(offset===1?' on':'')+'" data-plan-week="1" aria-pressed="'+(offset===1)+'">Next week</button></div>'+
@@ -41,10 +45,18 @@ function build(){
 function renderList(){
   if(!sheet)return;
   const all=recipes(),q=query.trim().toLowerCase(),list=all.filter(r=>!q||r.text.includes(q));
+  let order=list,why={};
+  if(!q&&sugg&&all.length>MIN){const hit=new Set(Object.keys(sugg));order=[...list.filter(r=>hit.has(r.id)).sort((a,b)=>sugg[a.id].i-sugg[b.id].i),...list.filter(r=>!hit.has(r.id))];Object.keys(sugg).forEach(k=>why[k]=sugg[k].w)}
+  else if(!q&&sugg===null&&picked.length<MIN&&all.length>MIN){
+    const pt=new Set();all.filter(r=>picked.includes(r.id)).forEach(r=>toks(r.text).forEach(w=>pt.add(w)));
+    const lc=lastCooked(),now=parse(key(new Date()));
+    const cand=list.filter(r=>!picked.includes(r.id)).map(r=>({r,o:[...toks(r.text)].filter(w=>pt.has(w)).length,d:lc[r.id]?Math.round((now-parse(lc[r.id]))/864e5):999})).filter(x=>x.d>=3).sort((a,b)=>b.o-a.o||b.d-a.d).slice(0,3);
+    sugg={};cand.forEach((x,i)=>{const w=x.o>0?'shares ingredients with your picks':(x.d>=999?'not cooked yet':'not cooked lately');why[x.r.id]=w;sugg[x.r.id]={w,i}});
+    order=[...cand.map(x=>x.r),...list.filter(r=>!why[r.id])]}
   const box=sheet.querySelector('#luPlanList');
   if(!all.length)box.innerHTML='<p>You have no saved recipes yet. Add or paste a recipe in Meals first, then plan around it.</p>';
   else if(!list.length)box.innerHTML='<p>No recipes match “'+esc(query)+'”.</p>';
-  else box.innerHTML=list.map(r=>{const on=picked.includes(r.id);return '<button type="button" class="lup-pick'+(on?' is-picked':'')+'" data-plan-pick="'+esc(r.id)+'" aria-pressed="'+on+'"><span class="tick" aria-hidden="true">'+(on?'✓':'')+'</span><span>'+esc(r.title)+'</span></button>'}).join('');
+  else box.innerHTML=order.map(r=>{const on=picked.includes(r.id);return '<button type="button" class="lup-pick'+(on?' is-picked':'')+'" data-plan-pick="'+esc(r.id)+'" aria-pressed="'+on+'"><span class="tick" aria-hidden="true">'+(on?'✓':'')+'</span><span>'+esc(r.title)+(why[r.id]&&!on?'<small style="display:block;font-size:12px;color:var(--accent)">Suggested: '+esc(why[r.id])+'</small>':'')+'</span></button>'}).join('');
   const titles=Object.fromEntries(all.map(r=>[r.id,r.title]));
   sheet.querySelector('#luPlanPreview').textContent=picked.length?picked.map((id,i)=>label(addDays(week,i))+': '+(titles[id]||'Removed recipe')).join('  ·  '):'';
   sheet.querySelector('#luPlanNote').textContent=note||(picked.length+' of '+MAX+' dinners chosen');
