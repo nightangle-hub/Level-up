@@ -50,28 +50,45 @@ async function readWithAI(file){
     const s=await freshSession(),img=await shrink(file);
     const r=await fetch(URL_+'/functions/v1/ai-assist',{method:'POST',headers:{'Content-Type':'application/json',apikey:KEY,Authorization:'Bearer '+s.access_token},body:JSON.stringify({task:'receipt',text:'Read this receipt.',images:[img]}),signal:AbortSignal.timeout(120000)});
     const j=await r.json().catch(()=>({}));
-    if(r.status===429)throw new Error('AI limit reached for now. Try again in a minute, or use ChatGPT below.');
-    if(!r.ok||!j.parsed)throw new Error('The AI did not return a readable answer. Try again, or use ChatGPT below.');
+    if(r.status===429)throw new Error('AI limit reached for now. Try again in a minute, or open Other ways below.');
+    if(!r.ok||!j.parsed)throw new Error('The AI did not return a readable answer. Try again, or open Other ways below.');
     const text=toText(j.parsed);
     const ta=document.getElementById('receiptPasteText'),go=document.querySelector('[data-action="v1-scan-paste"]');
     if(!ta||!go)throw new Error('Open Add a grocery shop and try again.');
     ta.value=text;ta.dispatchEvent(new Event('input',{bubbles:true}));
     st.msg='Done. Check every line below before saving. Nothing is saved yet.';st.busy=false;draw();
     go.click()
-  }catch(e){st.busy=false;st.msg=(e&&e.name==='TimeoutError')?'The AI took too long. Try again, or use ChatGPT below.':(e&&(e.name==='TypeError'||/failed to fetch|network|load failed/i.test(e.message||'')))?'Could not reach the AI. Check your connection, or use ChatGPT below.':(e&&e.message)||'Something went wrong. Use ChatGPT below.';draw()}}
+  }catch(e){st.busy=false;st.msg=(e&&e.name==='TimeoutError')?'The AI took too long. Try again, or open Other ways below.':(e&&(e.name==='TypeError'||/failed to fetch|network|load failed/i.test(e.message||'')))?'Could not reach the AI. Check your connection, or open Other ways below.':(e&&e.message)||'Something went wrong. Open Other ways below.';draw()}}
 function html(){
   const dis=st.busy?' disabled':'';
-  return '<div class="detail" id="luAiReceipt"><h2 style="margin:0 0 6px">Read with AI</h2><p class="capture-note">Choose a receipt photo. The AI reads it and fills the review for you. Nothing is saved until you confirm.</p><p class="capture-note">The photo goes to Google to be read. Cover any card or loyalty numbers first.</p><label class="subtle-button" for="luAiFile" style="display:inline-block"'+dis+'>'+(st.busy?'Reading...':'Read with AI')+'</label><input id="luAiFile" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"'+dis+'>'+(st.msg?'<p class="capture-note" role="status">'+esc(st.msg)+'</p>':'')+'</div>'}
+  return '<div class="detail" id="luAiReceipt"><h2 style="margin:0 0 6px">Add a receipt</h2><p class="capture-note">Choose a photo. The AI reads it and fills the review. Nothing is saved until you confirm.</p><p class="capture-note">The photo goes to Google to be read. Cover any card or loyalty numbers first.</p><label class="subtle-button" for="luAiFile" style="display:inline-block"'+dis+'>'+(st.busy?'Reading...':'Choose receipt photo')+'</label><input id="luAiFile" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"'+dis+'>'+(st.msg?'<p class="capture-note" role="status">'+esc(st.msg)+'</p>':'')+'</div>'}
 let lastSig='';
+let otherOpen=false;
 function draw(){
   const host=document.querySelector('.receipt-scanner');if(!host)return;
-  const h=html(),have=document.getElementById('luAiReceipt');
-  if(have&&have.parentNode===host&&lastSig===h)return;
-  lastSig=h;
-  const t=document.createElement('template');t.innerHTML=h;
-  if(have)have.remove();
-  const first=host.querySelector('.detail');
-  if(first)host.insertBefore(t.content.firstChild,first);else host.appendChild(t.content.firstChild)}
+  const signed=!!session();
+  const have=document.getElementById('luAiReceipt'),wrap=document.getElementById('luOther');
+  if(!signed){
+    if(have)have.remove();
+    if(wrap){const d=wrap.querySelector('.detail');if(d)host.insertBefore(d,wrap);wrap.remove()}
+    lastSig='';return}
+  const h=html();
+  if(!(have&&have.parentNode===host&&lastSig===h)){
+    lastSig=h;
+    const t=document.createElement('template');t.innerHTML=h;
+    if(have)have.remove();
+    const first=host.querySelector('.detail');
+    if(first)host.insertBefore(t.content.firstChild,first);else host.appendChild(t.content.firstChild)}
+  if(!document.getElementById('luOther')){
+    const dev=[...host.children].find(c=>c.classList&&c.classList.contains('detail')&&c.id!=='luAiReceipt'&&c.querySelector('#receiptPhoto'));
+    if(dev){
+      const w=document.createElement('details');w.className='detail';w.id='luOther';
+      w.open=otherOpen||!!dev.querySelector('.receipt-photo');
+      const sm=document.createElement('summary');sm.textContent='Other ways to add a receipt';
+      host.insertBefore(w,dev);w.appendChild(sm);w.appendChild(dev);
+      [...host.children].filter(c=>c!==w&&((c.tagName==='UL'&&c.classList.contains('short-notes'))||(c.tagName==='BUTTON'&&/^Enter items instead/.test(c.textContent.trim())))).forEach(c=>w.appendChild(c))}}
+  const sub=host.querySelector(':scope > p.hint');if(sub&&/Scan a receipt photo/.test(sub.textContent))sub.textContent='Take or choose a photo of your receipt. Nothing is saved until you confirm.'}
+document.addEventListener('toggle',e=>{if(e.target&&e.target.id==='luOther')otherOpen=e.target.open},true);
 document.addEventListener('change',e=>{
   const t=e.target;if(!t||t.id!=='luAiFile')return;
   const f=t.files&&t.files[0];if(f)readWithAI(f);t.value=''},true);
