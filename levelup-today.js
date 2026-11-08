@@ -69,7 +69,8 @@ function html(){
 function inject(){
   const c=document.getElementById('content');if(!c)return;
   const trainingHead=c.querySelector('.today-sub-standalone'),anchor=trainingHead||c.querySelector('.concept-feature');
-  if(!anchor||!(c.querySelector('.today-hero')||c.querySelector('.concept-hero')))return;
+  if(!anchor)return;
+  const app=document.getElementById('app');if(!app||!app.classList.contains('home-screen'))return;
   const existing=c.querySelector('#luToday');const next=html();if(!next)return;
   const tmp=document.createElement('div');tmp.innerHTML=next;const node=tmp.firstElementChild;
   if(existing){if(existing.outerHTML!==node.outerHTML)existing.replaceWith(node);return}

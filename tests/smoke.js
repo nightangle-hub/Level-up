@@ -63,21 +63,21 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
     assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance']);
   });
-  await ok('Today hero reads A quiet way to grow and offers Pick a meal', async () => {
+  await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
     await page.waitForTimeout(700);
     const o = await page.evaluate(() => {
-      const lead = document.querySelector('.today-lead')?.textContent || '';
-      const title = document.querySelector('.today-title')?.textContent || '';
-      const pick = document.querySelector('.today-pick');
-      return { lead, title, pickOk: !!pick && pick.getAttribute('data-view') === 'dinner' };
+      const chips = [...document.querySelectorAll('[data-action="care-tap"]')].length;
+      const hasOffline = !!document.querySelector('.today-offline, .today-offline-card');
+      const hasDinnerCard = !!document.querySelector('.today-dinner');
+      return { chips, hasOffline, hasDinnerCard };
     });
-    assert(/A quiet way to grow/i.test(o.lead), 'lead line missing: ' + o.lead);
-    assert(/What do you feel like/i.test(o.title), 'title missing: ' + o.title);
-    assert(o.pickOk, 'Pick a meal button not linking to dinner view');
+    assert(o.chips >= 8, 'Kind to self chips missing (' + o.chips + ')');
+    assert(o.hasOffline, 'offline mode section missing on Today');
+    assert(!o.hasDinnerCard, 'dinner card should have moved off Today');
   });
-  await ok('Pick a meal shows Hot day and Cold day shortcuts', async () => {
-    await page.evaluate(() => document.querySelector('.today-pick')?.click());
+  await ok('Food tab is the Pick a meal screen with Hot/Cold shortcuts', async () => {
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]')?.click());
     await page.waitForTimeout(600);
     const o = await page.evaluate(() => {
       const presets = [...document.querySelectorAll('[data-action="mood-preset"]')].map(b => b.textContent.trim());
