@@ -8,8 +8,8 @@ function stockList(text){
  for(let line of text.split(/\r?\n/)){
   line=line.trim().replace(/^[-*•]\s*/,'').replace(/^\d+[.)]\s*/,'').replace(/^\[[ xX]\]\s*/,'').replace(/\*\*/g,'');
   if(!line||/^```/.test(line)||/^(?:item|name)\s*\|/i.test(line)||/^[-| :]+$/.test(line))continue;
-  const m=line.match(/^(.*?)\s*(?:\||:|[–—]| - )\s*(plenty|some|low|unknown|unsure)\s*(?:\|\s*(.*))?$/i);
-  const name=(m?m[1]:line).trim(),level=m&&/^(plenty|some|low)$/i.test(m[2])?m[2].toLowerCase():'';
+  const m=line.match(/^(.*?)\s*(?:\||:|[–—]| - )\s*(plenty|some|low|stocked|getting low|need more|unknown|unsure)\s*(?:\|\s*(.*))?$/i);
+  const name=(m?m[1]:line).trim(),LV0={stocked:'plenty','getting low':'some','need more':'low'},k=m?m[2].toLowerCase():'',level=m&&/^(plenty|some|low|stocked|getting low|need more)$/i.test(m[2])?(LV0[k]||k):'';
   if(!name||name.length>100)throw Error('Use one item per line, with names under 100 characters.');
   const key=norm(name);if(seen.has(key))continue;seen.add(key);
   const uncertain=/\?|uncertain|maybe|possibly|unsure|unknown/i.test(name+' '+(m?.[3]||''))||!level;
