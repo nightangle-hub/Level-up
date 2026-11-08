@@ -63,19 +63,21 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
     assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance']);
   });
-  await ok('Today shows a What do you feel like dinner card linking to Pick a meal', async () => {
+  await ok('Today hero reads A quiet way to grow and offers Pick a meal', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
     await page.waitForTimeout(700);
     const o = await page.evaluate(() => {
-      const items = [...document.querySelectorAll('#luToday .lut-t b')].map(b => b.textContent);
-      const btn = [...document.querySelectorAll('#luToday .lut-go')].find(b => /Pick a meal/i.test(b.textContent));
-      return { found: items.some(t => /What do you feel like/i.test(t)), btn: !!btn && btn.getAttribute('data-view') === 'dinner' };
+      const lead = document.querySelector('.today-lead')?.textContent || '';
+      const title = document.querySelector('.today-title')?.textContent || '';
+      const pick = document.querySelector('.today-pick');
+      return { lead, title, pickOk: !!pick && pick.getAttribute('data-view') === 'dinner' };
     });
-    assert(o.found, 'What do you feel like card not on Today');
-    assert(o.btn, 'Pick a meal button not linking to dinner view');
+    assert(/A quiet way to grow/i.test(o.lead), 'lead line missing: ' + o.lead);
+    assert(/What do you feel like/i.test(o.title), 'title missing: ' + o.title);
+    assert(o.pickOk, 'Pick a meal button not linking to dinner view');
   });
   await ok('Pick a meal shows Hot day and Cold day shortcuts', async () => {
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#luToday .lut-go')].find(x => /Pick a meal/i.test(x.textContent)); if (b) b.click(); });
+    await page.evaluate(() => document.querySelector('.today-pick')?.click());
     await page.waitForTimeout(600);
     const o = await page.evaluate(() => {
       const presets = [...document.querySelectorAll('[data-action="mood-preset"]')].map(b => b.textContent.trim());
