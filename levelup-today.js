@@ -68,11 +68,12 @@ function html(){
   (dinner?'<div class="lut-card"><p class="micro">TONIGHT</p><ul>'+dinner+'</ul></div>':'')+'</section>'}
 function inject(){
   const c=document.getElementById('content');if(!c)return;
-  const anchor=c.querySelector('.concept-feature');if(!anchor||!c.querySelector('.concept-hero'))return;
+  const trainingHead=c.querySelector('.today-sub-standalone'),anchor=trainingHead||c.querySelector('.concept-feature');
+  if(!anchor||!(c.querySelector('.today-hero')||c.querySelector('.concept-hero')))return;
   const existing=c.querySelector('#luToday');const next=html();if(!next)return;
   const tmp=document.createElement('div');tmp.innerHTML=next;const node=tmp.firstElementChild;
   if(existing){if(existing.outerHTML!==node.outerHTML)existing.replaceWith(node);return}
-  anchor.after(node)}
+  if(trainingHead)anchor.before(node);else anchor.after(node)}
 let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{inject()}catch(e){}})}
 document.addEventListener('click',e=>{const tb=e.target.closest&&e.target.closest('[data-lu-tier]');if(tb&&window.LevelUpMissions){window.LevelUpMissions.setSeenTier(Number(tb.dataset.luTier));schedule();return}const b=e.target.closest&&e.target.closest('[data-lu-pause],[data-lu-resume]');if(!b)return;const M=window.LevelUpMissions;if(!M)return;if(b.hasAttribute('data-lu-resume'))M.resume();else{const r=document.getElementById('luPauseReason'),to=document.getElementById('luPauseTo');M.pause(r?r.value:'other',to?to.value:'')}schedule()});
 function start(){const c=document.getElementById('content');if(!c)return;new MutationObserver(schedule).observe(c,{childList:true});document.addEventListener('bloom-training-xp',schedule);window.addEventListener('storage',schedule);schedule()}
