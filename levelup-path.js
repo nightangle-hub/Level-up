@@ -1,10 +1,10 @@
 /* RaiKiba guided food path. Shows one "next step" card on Meals (Plan, Check, Shop, Save) and a
    short Check stock sheet for items that are unknown or older than 14 days.
-   Stock changes go through the app's own Plenty / Some / Low control, so undo and sync keep working.
+   Stock changes go through the app's own Stocked / Getting low / Need more control, so undo and sync keep working.
    Only its own key stores "skip for today"; that key is not synced and not part of the main save. */
 (function(){
 'use strict';
-const SK='levelup-path-v1',STALE=14*864e5,MAXLIST=8;
+const LB={plenty:'Stocked',some:'Getting low',low:'Need more'},SK='levelup-path-v1',STALE=14*864e5,MAXLIST=8;
 const pad=n=>String(n).padStart(2,'0');
 const todayKey=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,7 +52,7 @@ function inject(){
 let sheet=null,lastFocus=null;
 function renderSheet(){
   if(!sheet)return;const st=readState(),d=doubtful(st);
-  const rows=d.map(s=>{const cur=String(s.level||'');return '<div class="lpc-row"><b>'+esc(s.name)+'</b><small>'+esc(cur?cur.charAt(0).toUpperCase()+cur.slice(1):'Level unknown')+', '+esc(ageText(s.updated))+'</small><div class="lpc-chips" role="group" aria-label="Amount of '+esc(s.name)+'">'+['plenty','some','low'].map(l=>'<button type="button" data-path-level="'+l+'" data-id="'+esc(s.id)+'" aria-pressed="'+(cur===l)+'"'+(cur===l?' class="lpc-primary"':'')+'>'+l.charAt(0).toUpperCase()+l.slice(1)+'</button>').join('')+'</div></div>'}).join('');
+  const rows=d.map(s=>{const cur=String(s.level||'');return '<div class="lpc-row"><b>'+esc(s.name)+'</b><small>'+esc(LB[cur]||'Level unknown')+', '+esc(ageText(s.updated))+'</small><div class="lpc-chips" role="group" aria-label="Amount of '+esc(s.name)+'">'+['plenty','some','low'].map(l=>'<button type="button" data-path-level="'+l+'" data-id="'+esc(s.id)+'" aria-pressed="'+(cur===l)+'"'+(cur===l?' class="lpc-primary"':'')+'>'+LB[l]+'</button>').join('')+'</div></div>'}).join('');
   sheet.innerHTML='<div class="lpc-in"><h1>Check your stock</h1><p>Only items that are unknown or 14+ days old. Tap a level to confirm it. Anything you skip stays as is.</p>'+(rows||'<p>All checked. Nothing else needs confirming.</p>')+'<div class="lpc-actions"><button type="button" class="lpc-primary" data-path-close>'+(d.length?'Close':'Done')+'</button>'+(d.length?'<button type="button" data-path-skip>Skip for today</button>':'')+'</div></div>'}
 function themeSheet(){
   const src=document.querySelector('.app')||document.body,cs=getComputedStyle(src);
