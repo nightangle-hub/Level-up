@@ -244,6 +244,30 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('weave: add an exercise inside a Foundation workout, XP cap stays 30, old drafts unaffected, routine tiles no longer link to old pages', async () => {
+    const C = require(path.join(root, 'bloom-core.js')), snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    const tab = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); };
+    const clickText = async (sel, t) => { await page.evaluate(([sel, t]) => [...document.querySelectorAll(sel)].find(b => b.innerText.trim().startsWith(t)).click(), [sel, t]); await page.waitForTimeout(500); };
+    await tab(); assert(await page.evaluate(() => !document.querySelector('#content [data-view^="foundation-"]')), 'routine tiles still link to old Foundation pages');
+    await clickText('#content button', 'Start Foundation'); await clickText('#content summary', 'Workout options'); await clickText('#content button', 'All exercise view');
+    assert(await page.evaluate(() => !!document.getElementById('workoutAddEx')), 'Add an exercise form missing');
+    const add = async name => { await page.evaluate(n => { const f = document.getElementById('workoutAddEx'); f.elements.choice.value = 's:' + n; f.requestSubmit(); }, name); await page.waitForTimeout(600); };
+    await add('Leg press'); await add('Push ups');
+    await page.evaluate(() => document.querySelector('[data-wx-remove]').click()); await page.waitForTimeout(500);
+    let d = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).trainingWorkoutDraft);
+    assert.deepStrictEqual(d.extras, ['Leg press'], 'remove should drop only the last extra: ' + JSON.stringify(d.extras));
+    await add('leg press'); d = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).trainingWorkoutDraft); assert.strictEqual(d.extras.length, 1, 'duplicate extra accepted');
+    for (const k of ['0-0', '1-0', '2-0', '3-0']) { await page.evaluate(k => { const i = document.querySelector('[data-workout-value="reps"][data-key="' + k + '"]'); i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('[data-action="workout-tick"][data-key="' + k + '"]').click(); }, k); await page.waitForTimeout(500); }
+    const st = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')));
+    const sets = st.trainingLogs.filter(e => e.kind === 'set' && !e.voided);
+    assert.strictEqual(sets.length, 4); assert(sets.every(e => e.planId === 'foundation-v1' && e.workoutId === st.trainingWorkoutDraft.id), 'extras must share the workout id');
+    assert(sets.some(e => e.exercise === 'Leg press'));
+    const x = C.trainingXP(st); assert.strictEqual(x.missions, 3, 'XP cap broken: ' + x.missions); C.validate(st);
+    await clickText('#content button', 'Finish workout'); const t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(/Mission complete/.test(t), 'full workout with an extra should be complete: ' + t.slice(0, 200));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
