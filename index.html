@@ -646,8 +646,8 @@ function animate(force=false){
  welcomeTimers.forEach(clearTimeout);welcomeTimers=[];
  const reduced=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
  document.getElementById('greeting').textContent=state.name?'Welcome, '+state.name+'.':'Welcome.';
- let seen=false;const todayKey=new Date().toDateString();try{seen=localStorage.getItem('lu-splash-day')===todayKey}catch(e){}
- if(!force&&!seen){try{localStorage.setItem('lu-splash-day',todayKey)}catch(e){}}
+ let seen=false;const launchKey='1';try{seen=sessionStorage.getItem('lu-splash-launch')===launchKey}catch(e){}
+ if(!force&&!seen){try{sessionStorage.setItem('lu-splash-launch',launchKey)}catch(e){}}
  if((reduced||seen)&&!force){overlay.classList.add('out');overlay.classList.remove('playing');overlay.setAttribute('aria-hidden','true');app.classList.remove('intro');return;}
  // Reset everything synchronously and allow the browser to paint the starting state.
  overlay.style.transition='none';
