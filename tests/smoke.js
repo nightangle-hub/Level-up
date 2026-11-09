@@ -126,6 +126,22 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     assert(await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).userRecipes.length) === n0 - 1, 'recipe not deleted');
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click()); await page.waitForTimeout(500);
   });
+  await ok('Stock is a compact list: one row per item, tap chip flips level, filter works', async () => {
+    const mk = (n, i) => ({ id: 's' + i, name: n, amount: null, unit: 'unknown', precision: 'presence_only', level: 'plenty', descriptor: 'plenty', source: 'confirmed-stocktake', updated: new Date().toISOString() });
+    const names = ['Tofu', 'Rice', 'Eggs', 'Garlic', 'Ginger', 'Miso paste', 'Chilli oil', 'Bok choy', 'Noodles', 'Soy sauce'];
+    await page.evaluate(x => localStorage.setItem('bloom-zen-v1', JSON.stringify({ schemaVersion: 3, theme: 'light', page: 'today', cookedMeals: [], stockItems: x, userRecipes: [] })), names.map(mk));
+    await page.reload(); await page.waitForTimeout(1500);
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(e => e.innerText.trim() === 'Stock').click()); await page.waitForTimeout(600);
+    assert.strictEqual(await page.evaluate(() => document.querySelectorAll('.stock-row').length), 10);
+    await page.evaluate(() => document.querySelector('.stock-row .stock-chip').click()); await page.waitForTimeout(500);
+    assert.strictEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).stockItems.filter(x => x.level === 'low').length), 1);
+    await page.fill('.stock-filter', 'oil'); await page.waitForTimeout(300);
+    assert.strictEqual(await page.evaluate(() => [...document.querySelectorAll('.stock-row')].filter(r => !r.hidden).length), 1);
+    await page.evaluate(() => localStorage.setItem('bloom-zen-v1', JSON.stringify({ schemaVersion: 3, theme: 'light', page: 'today', cookedMeals: [], stockItems: [], userRecipes: [] })));
+    await page.reload(); await page.waitForTimeout(1200);
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click()); await page.waitForTimeout(400);
+  });
   await ok('New recipe shows the three way strip and Back returns to Meals', async () => {
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click());
     await page.waitForTimeout(500);
