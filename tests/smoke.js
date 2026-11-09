@@ -32,6 +32,15 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     assert.strictEqual(out[0].amount, 300);
   });
 
+  await ok('moods are worked out for new recipes (soup is cold day, salad is hot day, explicit wins)', () => {
+    const M = require(path.join(root, 'recipe-moods.js'));
+    const R = (title, ing, x) => Object.assign({ title, ingredients: ing, servings: '2', notes: '' }, x || {});
+    assert(M.get(R('Miso tofu soup', ['miso', 'tofu', 'water', 'onion', 'oil', 'soy'])).includes('soupy'));
+    assert(M.get(R('Cucumber salad', ['cucumber', 'vinegar', 'oil', 'chilli oil', 'sugar', 'salt'])).includes('light'));
+    assert(M.get(R('Egg rice', ['eggs', 'rice', 'soy'])).includes('quick'));
+    assert.deepStrictEqual(M.get(R('Miso soup', ['a'], { moods: ['spicy'] })), ['spicy']);
+  });
+
   const types = { '.html': 'text/html', '.js': 'text/javascript', '.png': 'image/png', '.webmanifest': 'application/json' };
   const srv = http.createServer((q, r) => {
     const f = path.join(root, decodeURIComponent(q.url.split('?')[0]).replace(/^\/$/, '/index.html'));
@@ -85,6 +94,22 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     });
     assert(o.hot && o.cold, 'Hot/Cold day shortcuts missing');
     assert(o.heading, 'Pick a meal title not "What do you feel like?"');
+  });
+  await ok('Food shows saved recipes even with no stock, Cold day filters, no false Nothing matches', async () => {
+    const R = (id, title, ing) => ({ id, title, ingredients: ing, steps: ['Cook.'], servings: '2', notes: '', createdAt: new Date().toISOString() });
+    await page.evaluate(rs => localStorage.setItem('bloom-zen-v1', JSON.stringify({ schemaVersion: 3, theme: 'light', page: 'today', cookedMeals: [], stockItems: [], userRecipes: rs })), [R('r1', 'Miso tofu soup', ['1 tbsp miso', '200 g tofu', '2 cups water', '1 spring onion', '1 tsp sesame oil', '1 tsp soy sauce']), R('r2', 'Cucumber salad', ['2 cucumbers', '1 tbsp rice vinegar', '1 tsp sesame oil', '1 tsp chilli oil', '1 tsp sugar', '1 tsp salt'])]);
+    await page.reload(); await page.waitForTimeout(1500);
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click()); await page.waitForTimeout(600);
+    let t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(/Miso tofu soup/.test(t) && /Cucumber salad/.test(t), 'saved recipes hidden');
+    assert(!/Nothing matches/.test(t), 'false Nothing matches');
+    await page.evaluate(() => document.querySelector('[data-action="mood-preset"][data-day="cold"]').click()); await page.waitForTimeout(500);
+    t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(/Miso tofu soup/.test(t) && !/Cucumber salad/.test(t), 'Cold day should keep soup only');
+    await page.evaluate(() => document.querySelector('[data-action="mood-preset"][data-day="hot"]').click()); await page.waitForTimeout(500);
+    t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(/Cucumber salad/.test(t) && !/Miso tofu soup/.test(t), 'Hot day should keep salad only');
+    await page.evaluate(() => document.querySelector('[data-action="dinner-reset"]')?.click()); await page.waitForTimeout(300);
   });
   await ok('New recipe shows the three way strip and Back returns to Meals', async () => {
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click());
