@@ -44,8 +44,9 @@ function xpFire(delta,label,pct){if(document.querySelector('.lu-xpbar'))return;c
   const W=window.innerWidth,H=window.innerHeight;[[-40,-60],[30,-80],[-70,-20],[60,-40],[10,-100],[-20,-90]].forEach(([x,y],i)=>{const k=document.createElement('i');k.className='lu-spark';k.style.cssText='--x:'+x+'px;--y:'+y+'px;left:'+(W-60+i*4)+'px;top:'+(H*0.46+14)+'px;animation-delay:'+(0.15+i*0.05)+'s';document.body.appendChild(k);setTimeout(()=>k.remove(),1500)});
   const pet=document.querySelector('.header img');if(pet){pet.classList.add('lu-hop');setTimeout(()=>pet.classList.remove('lu-hop'),1300)}}
 function checkXp(xp,rows,leveled){let seen=null;try{seen=JSON.parse(localStorage.getItem(XPSEEN))}catch(e){}
-  const done=rows.filter(r=>r.done&&r.id!=='clear').map(r=>r.id),save=()=>{try{localStorage.setItem(XPSEEN,JSON.stringify({total:xp.total,done}))}catch(e){}};
-  if(!seen||typeof seen.total!=='number'){save();return}
+  const done=rows.filter(r=>r.done&&r.id!=='clear').map(r=>r.id),save=()=>{try{localStorage.setItem(XPSEEN,JSON.stringify({total:xp.total,done,v:2}))}catch(e){}};
+  /* v2: XP formula gained a 60 minute tier (Step 3). Re-baseline once, silently, so old long sessions never fire a surprise toast. Local only, so offline is fine. */
+  if(!seen||typeof seen.total!=='number'||seen.v!==2){save();return}
   if(xp.total>seen.total&&!leveled){const d=xp.total-seen.total,fresh=rows.filter(r=>r.done&&r.id!=='clear'&&!(seen.done||[]).includes(r.id));const n=nextTier(xp.level,xp.total);
     xpFire(d,fresh.length?fresh[0].label+' cleared':'Nice one',n?Math.max(4,Math.min(100,Math.round(n.have/n.need*100))):100)}
   if(xp.total!==seen.total||done.join()!==(seen.done||[]).join())save()}
