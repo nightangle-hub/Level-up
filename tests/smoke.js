@@ -190,6 +190,19 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('XP toast: never on cold open, still fires for XP earned while the app is open', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    const seed = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')), t = window.BloomCore.date(); s.trainingLogs = [{ id: 'z1', kind: 'cardio', mode: 'Other cardio', label: 'Dance', minutes: 90, date: t, createdAt: new Date().toISOString() }]; localStorage.setItem('bloom-zen-v1', JSON.stringify(s)); localStorage.setItem('levelup-xpseen-v1', JSON.stringify({ total: 0, done: [] })); return true; });
+    await page.reload(); await page.waitForTimeout(4500);
+    assert.strictEqual(await page.evaluate(() => document.querySelectorAll('.lu-xpbar').length), 0, 'toast on cold open');
+    assert.strictEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('levelup-xpseen-v1')).total), 30, 'baseline not saved');
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')), d = new Date(Date.now() - 864e5 * 2), t = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); s.trainingLogs.push({ id: 'z2', kind: 'cardio', mode: 'Walking', minutes: 30, date: t, createdAt: new Date().toISOString() }); localStorage.setItem('bloom-zen-v1', JSON.stringify(s)); document.querySelector('.bottom [data-tab="train"]').click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="today"], .bottom [data-page="today"]').click()); await page.waitForTimeout(1200);
+    assert(await page.evaluate(() => document.querySelectorAll('.lu-xpbar').length > 0), 'no toast for XP earned while open');
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); localStorage.removeItem('levelup-xpseen-v1'); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
