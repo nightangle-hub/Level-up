@@ -169,6 +169,27 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const n = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')); return [s.purchaseRecords.length, s.stockItems.length]; });
     assert.deepStrictEqual(n, [2, 2]);
   });
+  await ok('step 3: guardrails, XP tiers and unified log', async () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'index.html'), 'utf8');
+    for (const id of ['trainingMoveLog', 'trainingFreeLog', 'trainingCardioLog']) assert(src.includes(id), 'missing form id ' + id);
+    const bad = [...src.matchAll(/data-view="(?!training|foundation|workout|split)[a-z-]*(?:move|lift|cardio|activity)[a-z-]*"/g)];
+    assert.strictEqual(bad.length, 0, 'non training-* screen name: ' + bad.map(m => m[0]).join(', '));
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    const xp = await page.evaluate(() => { const C = window.BloomCore, d = JSON.parse(localStorage.getItem('bloom-zen-v1')), t = C.date(), at = m => { d.trainingLogs = [{ id: 'a' + m, kind: 'cardio', mode: 'Other cardio', minutes: m, date: t, createdAt: new Date().toISOString() }]; return C.trainingXP(d).total; }; return [at(15), at(20), at(30), at(45), at(60), at(90)]; });
+    assert.deepStrictEqual(xp, [10, 10, 20, 20, 30, 30]);
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    assert(await page.evaluate(() => /Log something else/.test(document.querySelector('#content').innerText) && !/Walking & cardio/.test(document.querySelector('#content .concept-training').innerText)), 'Train tile merge');
+    assert(await page.evaluate(() => /Strength days/.test(document.querySelector('#content').innerText)), 'weekly card');
+    await page.evaluate(() => document.querySelector('#content [data-view="training-free"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => { document.querySelector('[data-act-chip="Dance"]').click(); document.querySelector('[data-min-chip="60"]').click(); });
+    assert(await page.evaluate(() => /\+30 XP for 60/.test(document.querySelector('#moveXp').innerText)), 'XP preview');
+    await page.evaluate(() => document.querySelector('#trainingMoveLog button[type=submit]').click()); await page.waitForTimeout(600);
+    const r = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')), e = s.trainingLogs.at(-1); let valid = true; try { window.BloomCore.validate(JSON.parse(JSON.stringify(s))); } catch (x) { valid = x.message; } return { e, valid, tab: document.querySelector('.bottom [aria-current="page"]')?.textContent.trim() }; });
+    assert.strictEqual(r.e.label, 'Dance'); assert.strictEqual(r.e.mode, 'Other cardio'); assert.strictEqual(r.e.minutes, 60);
+    assert.strictEqual(r.valid, true, 'validator rejected label: ' + r.valid); assert(/Train/i.test(r.tab || ''), 'tab was ' + r.tab);
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
