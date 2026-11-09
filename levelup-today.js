@@ -52,6 +52,10 @@ function checkXp(xp,rows,leveled){let seen=null;try{seen=JSON.parse(localStorage
   if(xp.total!==seen.total||done.join()!==(seen.done||[]).join())save()}
 /* Cold open never toasts: XP is baselined once when the app loads, so only XP earned while the app is open animates (sync from another device or a formula change cannot surprise her). */
 (function(){try{const M=window.LevelUpMissions,st=read('bloom-zen-v1');if(!M||!window.BloomCore||!st)return;const xp=window.BloomCore.trainingXP(st),rows=M.status(st).rows;localStorage.setItem(XPSEEN,JSON.stringify({total:xp.total,done:rows.filter(r=>r.done&&r.id!=='clear').map(r=>r.id),v:2}))}catch(e){}})();
+/* XP toast fires wherever XP is earned (Train, Food, anywhere), not only when Today draws. Watches the page content and compares XP with the last seen total. */
+function xpNow(){try{const M=window.LevelUpMissions,st=read('bloom-zen-v1');if(!M||!window.BloomCore||!st)return;checkXp(window.BloomCore.trainingXP(st),M.status(st).rows,false)}catch(e){}}
+let xpTimer=0;const xpWatcher=new MutationObserver(()=>{clearTimeout(xpTimer);xpTimer=setTimeout(xpNow,300)});
+(function(){const c=document.getElementById('content');if(c)xpWatcher.observe(c,{childList:true,subtree:true})})();
 let qOpen=false;document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('lut-quests'))qOpen=d.open},true);
 function reward(){let n=[];try{n=(window.LevelUpPrizes&&window.LevelUpPrizes.pending)||[]}catch(e){}return n.length?'<p class="lut-sys"><button type="button" class="lut-mode" data-action="open" data-view="companion-rewards">'+(n.length===1?'New reward: '+esc(n[0]):n.length+' new rewards')+' ›</button></p>':''}
 function milestone(xp){const n=nextTier(xp.level,xp.total);if(!n)return '<p class="lut-sys">Top tier reached. Keep going for the next reward.</p>';const pct=Math.min(100,Math.round(n.have/n.need*100));return '<div class="lut-mile" role="img" aria-label="'+n.left+' XP to Tier '+n.tier+'"><small>Next milestone: Tier '+n.tier+' · '+n.left+' XP to go</small><span class="lut-track"><i style="width:'+pct+'%"></i></span></div>'}
