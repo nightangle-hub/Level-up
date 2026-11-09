@@ -353,6 +353,22 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('offline: Start offline mode and Resume apply straight away (toast, Today card, Train card) without a reload', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="today"], .bottom [data-page="today"]').click()); await page.waitForTimeout(600);
+    await page.evaluate(() => { const d = document.querySelector('.today-offline'); if (d) d.open = true; document.querySelector('[data-lu-pause]').click(); }); await page.waitForTimeout(700);
+    assert(await page.evaluate(() => !!document.querySelector('.wx3-toast') && /Offline mode on/.test(document.querySelector('.wx3-toast').innerText)), 'no confirmation toast');
+    assert(await page.evaluate(() => /Offline mode active/.test(document.querySelector('#content').innerText)), 'Today card did not switch to offline without a reload');
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    assert(await page.evaluate(() => /Training Paused/.test(document.querySelector('#content').innerText) && document.querySelector('#content .wx3-go').disabled), 'Train card not paused');
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="today"], .bottom [data-page="today"]').click()); await page.waitForTimeout(600);
+    await page.evaluate(() => document.querySelector('[data-lu-resume]').click()); await page.waitForTimeout(700);
+    assert(await page.evaluate(() => /Back online/.test((document.querySelector('.wx3-toast') || {}).innerText || '')), 'no resume toast');
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    assert(await page.evaluate(() => !/Training Paused/.test(document.querySelector('#content').innerText) && !document.querySelector('#content .wx3-go').disabled), 'Train card still paused after resume');
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); localStorage.removeItem('levelup-missions-v1'); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
