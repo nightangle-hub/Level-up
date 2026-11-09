@@ -217,6 +217,33 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('knee plan: validator rejects bad plans, rehab XP is 10 per day, old saves still validate', () => {
+    const C = require(path.join(root, 'bloom-core.js')), base = { schemaVersion: 1, theme: 'dark', page: 'today' };
+    C.validate(base);
+    C.validate({ ...base, physioPlan: { status: 'active', startedOn: '2026-11-06', log: { '2026-11-08': { done: ['wall-sit'], knee: 'fine' } } } });
+    for (const bad of [{ status: 'x' }, { status: 'active', log: { nope: {} } }, { status: 'active', log: { '2026-11-08': { done: ['squat'] } } }, { status: 'active', log: { '2026-11-08': { knee: 'bad' } } }]) assert.throws(() => C.validate({ ...base, physioPlan: bad }), 'accepted ' + JSON.stringify(bad));
+    const x = C.trainingXP({ physioPlan: { status: 'active', log: { '2026-11-08': { done: ['wall-sit', 'side-kicks'] }, '2026-11-07': { done: [] } } } });
+    assert.strictEqual(x.total, 10); assert.strictEqual(x.rehabDays, 1);
+  });
+  await ok('knee plan: set up, tick, feel, status, weekly card goal hidden, save validates', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    const go = async t => { await page.evaluate(t => [...document.querySelectorAll('#content button')].find(b => b.innerText.trim().startsWith(t)).click(), t); await page.waitForTimeout(450); };
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    let t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/of 150/.test(t), 'goal should show before a plan');
+    await go('Knee plan'); await go('Set up my knee plan');
+    await page.evaluate(() => document.querySelector('[data-knee="tick"][data-v="wall-sit"]').click()); await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('[data-knee="feel"][data-v="bit-sore"]').click()); await page.waitForTimeout(400);
+    const p = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).physioPlan);
+    assert.strictEqual(p.status, 'active'); const day = Object.values(p.log)[0]; assert.deepStrictEqual(day.done, ['wall-sit']); assert.strictEqual(day.knee, 'bit-sore');
+    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/Ask Carina/.test(t) && /3 to 4 out of 10/.test(t) && /Lunges/.test(t));
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/1 of 3 done today/.test(t) && !/of 150/.test(t), 'train row or goal hiding wrong: ' + t.slice(0, 300));
+    await go('Knee plan'); await page.evaluate(() => document.querySelector('[data-knee="status"][data-v="paused"]').click()); await page.waitForTimeout(400);
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/of 150/.test(t), 'goal should return when paused');
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
