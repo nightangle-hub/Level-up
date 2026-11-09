@@ -88,13 +88,14 @@ function logCare(kind){if(!CARE_KINDS.includes(kind))return false;const o=load()
 function unlogCare(kind){const o=load(),d=key(new Date());const before=(o.careActs||[]).length;o.careActs=(o.careActs||[]).filter(a=>!(a.date===d&&a.kind===kind));if(o.careActs.length!==before){save(o);notify();return true}return false}
 function careToday(){const o=load(),d=key(new Date());return new Set((o.careActs||[]).filter(a=>a.date===d).map(a=>a.kind))}
 function recordPhoto(){const o=load(),m=key(new Date()).slice(0,7);if(!o.photoMonths.includes(m)){o.photoMonths.push(m);save(o);notify()}}
-function pause(reason,to){const o=load(),t=key(new Date());if(activePause(o.pauses,t))return false;const end=okDate(to)&&to.slice(0,10)>=t?to.slice(0,10):null;o.pauses.push({from:t,to:end,reason:REASONS.includes(reason)?reason:'other'});save(o);notify();return true}
-function resume(){const o=load(),t=key(new Date()),y=addDays(t,-1);o.pauses=o.pauses.filter(p=>!(p.from<=t&&(!p.to||p.to>=t)&&p.from>=t)).map(p=>(p.from<=t&&(!p.to||p.to>=t))?Object.assign({},p,{to:y}):p);save(o);notify()}
+function pause(reason,to){const o=load(),t=key(new Date());if(activePause(o.pauses,t))return false;const end=okDate(to)&&to.slice(0,10)>=t?to.slice(0,10):null;o.pauses.push({from:t,to:end,reason:REASONS.includes(reason)?reason:'other'});save(o);notify();pauseChanged(true);return true}
+function resume(){const o=load(),t=key(new Date()),y=addDays(t,-1);o.pauses=o.pauses.filter(p=>!(p.from<=t&&(!p.to||p.to>=t)&&p.from>=t)).map(p=>(p.from<=t&&(!p.to||p.to>=t))?Object.assign({},p,{to:y}):p);save(o);notify();pauseChanged(false)}
 function getSeenTier(){return load().seenTier}
 function setSeenTier(t){const o=load();o.seenTier=cleanTier(t);save(o)}
 function getMode(now){const o=load(),t=typeof now==='string'?now:key(now||new Date()),ws=weekStart(t),nm=addDays(ws,7),cur=modeFor(o.modes,ws);return {mode:cur,pending:o.modes[nm]&&o.modes[nm]!==cur?o.modes[nm]:null}}
 /* Any change takes effect next Monday, so a week is always judged by the pace it started with. Choosing the current pace cancels a pending change. */
 function setMode(mode,now){if(!Object.prototype.hasOwnProperty.call(MODES,mode))return null;const o=load(),t=typeof now==='string'?now:key(now||new Date()),ws=weekStart(t),nm=addDays(ws,7),cur=modeFor(o.modes,ws),modes={};for(const k of Object.keys(o.modes))if(k<=ws)modes[k]=o.modes[k];let when='now';if(mode!==cur){modes[nm]=mode;when='next'}o.modes=modes;save(o);notify();return {mode,when,week:ws}}
+function pauseChanged(paused){try{root.document.dispatchEvent(new root.CustomEvent('raikiba-offline-changed',{detail:{paused}}))}catch(e){}}
 function notify(){try{root.document.dispatchEvent(new root.CustomEvent('bloom-training-xp',{detail:{mission:true}}))}catch(e){}}
 function bonus(state){return compute(state,load()).total}
 function status(state){return compute(state,load())}
