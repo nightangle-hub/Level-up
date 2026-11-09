@@ -217,6 +217,20 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('Train: one workout path only (never two Start/Resume buttons), and a saved Week page opens Today, not the old Foundation screens', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')); s.page = 'week'; localStorage.setItem('bloom-zen-v1', JSON.stringify(s)); });
+    await page.reload(); await page.waitForTimeout(4500);
+    let t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(!/YOUR WEEK|Review plan/.test(t), 'saved Week page still opens the old Week and Foundation screens: ' + t.slice(0, 160));
+    const train = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => ({ text: document.querySelector('#content').innerText, paths: [...document.querySelectorAll('#content button')].filter(b => /^(Start Foundation|Resume)/.test(b.innerText.trim())).length, old: !!document.querySelector('#content .workout-resume, #content .foundation-overview') })); };
+    let r = await train(); assert(r.paths === 1 && !r.old, 'fresh Train should have exactly one workout button, got ' + r.paths);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
+    r = await train(); assert(r.paths === 1 && !r.old && !/Start Foundation/.test(r.text), 'in-progress Train should have exactly one Resume button, got ' + r.paths + ': ' + r.text.slice(0, 160));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('knee plan: validator rejects bad plans, rehab XP is 10 per day, old saves still validate', () => {
     const C = require(path.join(root, 'bloom-core.js')), base = { schemaVersion: 1, theme: 'dark', page: 'today' };
     C.validate(base);
