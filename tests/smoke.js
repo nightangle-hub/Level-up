@@ -207,11 +207,11 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
   await ok('Train: an opened but empty Foundation workout is not "in progress"; a recorded set is', async () => {
     const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
     const tab = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => document.querySelector('#content').innerText); };
-    let t = await tab(); assert(/Start Foundation/.test(t), 'start button missing');
-    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    let t = await tab(); assert(/Start workout/.test(t), 'start button missing');
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
     t = await tab();
-    assert(!/IN PROGRESS/i.test(t) && /Start Foundation/.test(t) && !/Resume workout/.test(t), 'empty draft shows as in progress: ' + t.slice(0, 200));
-    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    assert(!/IN PROGRESS/i.test(t) && /Start workout/.test(t) && !/Resume workout/.test(t), 'empty draft shows as in progress: ' + t.slice(0, 200));
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
     await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
     t = await tab(); assert(/IN PROGRESS/i.test(t) && /Resume workout/.test(t), 'recorded set should show in progress: ' + t.slice(0, 200));
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
@@ -223,18 +223,18 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.reload(); await page.waitForTimeout(4500);
     let t = await page.evaluate(() => document.querySelector('#content').innerText);
     assert(!/YOUR WEEK|Review plan/.test(t), 'saved Week page still opens the old Week and Foundation screens: ' + t.slice(0, 160));
-    const train = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => ({ text: document.querySelector('#content').innerText, paths: [...document.querySelectorAll('#content button')].filter(b => /^(Start Foundation|Resume)/.test(b.innerText.trim())).length, old: !!document.querySelector('#content .workout-resume, #content .foundation-overview') })); };
+    const train = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => ({ text: document.querySelector('#content').innerText, paths: [...document.querySelectorAll('#content button')].filter(b => /^(Start workout|Resume)/.test(b.innerText.trim())).length, old: !!document.querySelector('#content .workout-resume, #content .foundation-overview') })); };
     let r = await train(); assert(r.paths === 1 && !r.old, 'fresh Train should have exactly one workout button, got ' + r.paths);
-    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
     await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
-    r = await train(); assert(r.paths === 1 && !r.old && !/Start Foundation/.test(r.text), 'in-progress Train should have exactly one Resume button, got ' + r.paths + ': ' + r.text.slice(0, 160));
+    r = await train(); assert(r.paths === 1 && !r.old && !/Start workout/.test(r.text), 'in-progress Train should have exactly one Resume button, got ' + r.paths + ': ' + r.text.slice(0, 160));
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
   await ok('Review screen: one "Add an exercise", keeps the walking and cardio panel, and an added exercise with no picture has no empty fold', async () => {
     const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
     await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
-    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => { const x = document.querySelector('[data-workout-value="reps"]'); if (x) { x.value = '8'; x.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(500);
       await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
@@ -244,10 +244,38 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     assert.strictEqual(r.h, 'Review your workout', 'not on the review screen: ' + r.h);
     assert.strictEqual(r.s.filter(t => t === 'Add an exercise').length, 1, 'Add an exercise should appear once: ' + JSON.stringify(r.s));
     assert(r.s.some(t => /Add walking or cardio/.test(t)), 'walking and cardio panel missing: ' + JSON.stringify(r.s));
+    const cl = await page.evaluate(() => [...document.querySelectorAll('#content button')].filter(b => b.innerText.trim() === 'Continue later').length);
+    assert.strictEqual(cl, 1, 'Continue later should appear once on Review, got ' + cl);
     await page.evaluate(() => { const d = [...document.querySelectorAll('#content details')].find(d => /Add an exercise/.test(d.querySelector('summary').innerText)); d.open = true; const f = d.querySelector('form'); f.querySelector('select[name="choice"]').value = 's:Hack squat'; f.requestSubmit(); }); await page.waitForTimeout(800);
     r = await sums();
     assert(r.s.filter(t => t === 'Add an exercise').length <= 1, 'Add an exercise duplicated after adding: ' + JSON.stringify(r.s));
     assert.strictEqual(r.empty, 0, 'an exercise with no picture or steps shows an empty fold: ' + JSON.stringify(r.s));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
+  await ok('workout look: plus/minus steppers, one main button, core option switch, no empty hero', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
+    const info = () => page.evaluate(() => ({ h1: document.querySelector('#content h1').innerText, steps: document.querySelectorAll('#content .wx2-set > .wx2-steps .wx2-step').length, art: !!document.querySelector('#content .wx2-art'), noart: !!document.querySelector('#content .wx2-hero.noart'), primary: [...document.querySelectorAll('#content .wx2-primary')].map(b => b.innerText.trim()), moveOn: [...document.querySelectorAll('#content button')].some(b => /^Move on/.test(b.innerText.trim())), reps: (document.querySelector('[data-workout-value="reps"]') || {}).value, chips: document.querySelectorAll('#content .wx2-chip').length }));
+    const val = () => page.evaluate(() => document.querySelector('[data-workout-value="reps"]').value);
+    let r = await info();
+    assert.strictEqual(r.h1, 'Chest press'); assert.strictEqual(r.steps, 2, 'reps and kg steppers expected'); assert(r.art && !r.noart, 'Chest press should show its picture'); assert.deepStrictEqual(r.primary, ['Done'], 'one main button before the set: ' + JSON.stringify(r.primary));
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '8', 'first plus should start at the low end of the target');
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '9');
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="-1"]').click()); assert.strictEqual(await val(), '8');
+    await page.evaluate(() => document.querySelector('[data-action="workout-tick"]').click()); await page.waitForTimeout(600);
+    r = await info(); assert.deepStrictEqual(r.primary, ['Next exercise'], 'after Done the main button is Next exercise: ' + JSON.stringify(r.primary)); assert(!r.moveOn, 'Move on duplicates Next exercise');
+    const st = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')));
+    assert(st.trainingLogs.some(e => e.kind === 'set' && e.exercise === 'Chest press' && e.reps === 8), 'tapped value should be what is saved');
+    for (let i = 0; i < 2; i++) {
+      await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+      if (i === 0) await page.evaluate(() => { const x = document.querySelector('[data-workout-value="reps"]'); x.value = '8'; x.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('[data-action="workout-tick"]').click(); }), await page.waitForTimeout(600);
+    }
+    r = await info(); assert.strictEqual(r.h1, 'Dead bug'); assert.strictEqual(r.chips, 3, 'core option switch missing'); assert.strictEqual(r.steps, 1, 'dead bug is bodyweight: reps only'); assert(r.art);
+    await page.evaluate(() => [...document.querySelectorAll('#content .wx2-chip')].find(b => /Cable crunch/.test(b.innerText)).click()); await page.waitForTimeout(700);
+    r = await info(); assert.strictEqual(r.h1, 'Cable crunch', 'core switch did not change the exercise'); assert(r.noart && !r.art, 'no picture: hero should be text only'); assert.strictEqual(r.steps, 2, 'cable crunch has a load');
+    assert(await page.evaluate(() => !document.querySelector('#content details.workout-guide')), 'old empty fold present');
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
@@ -283,7 +311,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const tab = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); };
     const clickText = async (sel, t) => { await page.evaluate(([sel, t]) => [...document.querySelectorAll(sel)].find(b => b.innerText.trim().startsWith(t)).click(), [sel, t]); await page.waitForTimeout(500); };
     await tab(); assert(await page.evaluate(() => !document.querySelector('#content [data-view^="foundation-"]')), 'routine tiles still link to old Foundation pages');
-    await clickText('#content button', 'Start Foundation'); await clickText('#content summary', 'Workout options'); await clickText('#content button', 'All exercise view');
+    await clickText('#content button', 'Start workout'); await clickText('#content summary', 'Workout options'); await clickText('#content button', 'All exercise view');
     assert(await page.evaluate(() => !!document.getElementById('workoutAddEx')), 'Add an exercise form missing');
     const add = async name => { await page.evaluate(n => { const f = document.getElementById('workoutAddEx'); f.elements.choice.value = 's:' + n; f.requestSubmit(); }, name); await page.waitForTimeout(600); };
     await add('Leg press'); await add('Push ups');
