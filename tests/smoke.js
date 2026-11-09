@@ -235,7 +235,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(() => document.querySelector('[data-knee="feel"][data-v="bit-sore"]').click()); await page.waitForTimeout(400);
     const p = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).physioPlan);
     assert.strictEqual(p.status, 'active'); const day = Object.values(p.log)[0]; assert.deepStrictEqual(day.done, ['wall-sit']); assert.strictEqual(day.knee, 'bit-sore');
-    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/Ask Carina/.test(t) && /13 Nov/.test(await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('bloom-zen-v1')).physioPlan))) && /3 to 4 out of 10/.test(t) && /Lunges/.test(t));
+    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/20 reps each side/.test(t) && !/Ask Carina/.test(t) && /13 Nov/.test(await page.evaluate(() => document.querySelector('.knee-notes').textContent)) && /3 to 4 out of 10/.test(t) && /Lunges/.test(t));
     await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
     t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/1 of 3 done today/.test(t) && !/of 150/.test(t), 'train row or goal hiding wrong: ' + t.slice(0, 300));
     await go('Knee plan'); await page.evaluate(() => document.querySelector('[data-knee="status"][data-v="paused"]').click()); await page.waitForTimeout(400);
