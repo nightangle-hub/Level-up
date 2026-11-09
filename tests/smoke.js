@@ -231,6 +231,26 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('Review screen: one "Add an exercise", keeps the walking and cardio panel, and an added exercise with no picture has no empty fold', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => { const x = document.querySelector('[data-workout-value="reps"]'); if (x) { x.value = '8'; x.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(500);
+      await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    }
+    const sums = () => page.evaluate(() => ({ s: [...document.querySelectorAll('#content summary')].map(x => x.innerText.trim()), empty: [...document.querySelectorAll('#content details.workout-guide')].filter(d => !d.querySelector('ol,figure,p,a')).length, h: (document.querySelector('#content h1') || {}).innerText }));
+    let r = await sums();
+    assert.strictEqual(r.h, 'Review your workout', 'not on the review screen: ' + r.h);
+    assert.strictEqual(r.s.filter(t => t === 'Add an exercise').length, 1, 'Add an exercise should appear once: ' + JSON.stringify(r.s));
+    assert(r.s.some(t => /Add walking or cardio/.test(t)), 'walking and cardio panel missing: ' + JSON.stringify(r.s));
+    await page.evaluate(() => { const d = [...document.querySelectorAll('#content details')].find(d => /Add an exercise/.test(d.querySelector('summary').innerText)); d.open = true; const f = d.querySelector('form'); f.querySelector('select[name="choice"]').value = 's:Hack squat'; f.requestSubmit(); }); await page.waitForTimeout(800);
+    r = await sums();
+    assert(r.s.filter(t => t === 'Add an exercise').length <= 1, 'Add an exercise duplicated after adding: ' + JSON.stringify(r.s));
+    assert.strictEqual(r.empty, 0, 'an exercise with no picture or steps shows an empty fold: ' + JSON.stringify(r.s));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('knee plan: validator rejects bad plans, rehab XP is 10 per day, old saves still validate', () => {
     const C = require(path.join(root, 'bloom-core.js')), base = { schemaVersion: 1, theme: 'dark', page: 'today' };
     C.validate(base);
