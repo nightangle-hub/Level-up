@@ -204,6 +204,19 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); localStorage.removeItem('levelup-xpseen-v1'); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('Train: an opened but empty Foundation workout is not "in progress"; a recorded set is', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    const tab = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => document.querySelector('#content').innerText); };
+    let t = await tab(); assert(/Start Foundation/.test(t), 'start button missing');
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    t = await tab();
+    assert(!/IN PROGRESS/i.test(t) && /Start Foundation/.test(t) && !/Resume workout/.test(t), 'empty draft shows as in progress: ' + t.slice(0, 200));
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start Foundation/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
+    await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
+    t = await tab(); assert(/IN PROGRESS/i.test(t) && /Resume workout/.test(t), 'recorded set should show in progress: ' + t.slice(0, 200));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
