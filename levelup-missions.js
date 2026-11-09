@@ -8,7 +8,7 @@
    Pauses (holiday, injury) are stored in levelup-missions-v1 and skip streak weeks and shrink the boss target. Weeks start on Monday. Looks and daily care earn no XP. */
 (function(root,factory){const api=factory(root);if(typeof module==='object')module.exports=api;else root.LevelUpMissions=api})(typeof globalThis!=='undefined'?globalThis:this,function(root){
 'use strict';
-const TARGET={move:3,cook:2,stock:2,care:2},XP={move:30,cook:10,stock:5,care:5,bonus:10,photo:10,pb:10,boss:30},BOSS_TARGET=12,REASONS=['holiday','injury','other'],CARE_KINDS=['rest','water','walk','cat','air','calm','thanks','reach'],
+const TARGET={move:3,cook:2,stock:2,care:2},XP={move:30,cook:10,stock:5,care:5,bonus:10,photo:10,pb:10,boss:30},BOSS_TARGET=12,BOSS_ENDS='2026-11',REASONS=['holiday','injury','other'],CARE_KINDS=['rest','water','walk','cat','air','calm','thanks','reach'],
 MODES={easy:{label:'Easy',move:2,cook:1,blurb:'A gentler pace, steady progress'},normal:{label:'Normal',move:3,cook:2,blurb:'A balanced weekly challenge'},hard:{label:'Hard',move:4,cook:3,blurb:'Push further with bigger goals'},legendary:{label:'Legendary',move:5,cook:4,blurb:'For those ready to go all in'}},MODE_ORDER=['easy','normal','hard','legendary'];
 const pad=n=>String(n).padStart(2,'0');
 const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -49,7 +49,7 @@ function bossCalc(weeks,pauses,today){
   const month=today.slice(0,7),days=new Map();
   for(const w of Object.keys(weeks))for(const d of weeks[w].move){const m=d.slice(0,7);if(!days.has(m))days.set(m,new Set());days.get(m).add(d)}
   let xp=0,cur={have:0,target:bossTarget(month,pauses,today),done:false,month};
-  for(const m of new Set([...days.keys(),month])){if(m>month)continue;const have=days.has(m)?days.get(m).size:0,target=bossTarget(m,pauses,today),done=have>=target;if(done)xp+=XP.boss;if(m===month)cur={have,target,done,month:m}}
+  for(const m of new Set([...days.keys(),month])){if(m>month)continue;const have=days.has(m)?days.get(m).size:0,target=bossTarget(m,pauses,today),done=have>=target;if(done&&m<BOSS_ENDS)xp+=XP.boss;if(m===month)cur={have,target,done,month:m}}
   return {xp,cur}}
 function streakCalc(weeks,pauses,today,modes){
   const cw=weekStart(today),first=Object.keys(weeks).filter(w=>weeks[w].move.size>0).sort()[0],used=new Set();let streak=0;
@@ -72,10 +72,10 @@ function compute(state,extras,now){
   const cws=weekStart(today),curMode=modeFor(modes,cws),cm=MODES[curMode],nextMon=addDays(cws,7),cur=weekResult(weeks[cws],curMode),pending=modes[nextMon]&&modes[nextMon]!==curMode?modes[nextMon]:null;
   return {total,week:cur,weekStart:cws,mode:curMode,pendingMode:pending,photoDone:photoMonths.includes(month),pb,boss:boss.cur,streak,paused:activePause(pauses,today),stats:statsCalc(state),
     rows:[
-      {id:'move',label:'Move',detail:'Train or do cardio on '+cm.move+' days',have:cur.have.move,target:cm.move,xp:XP.move,done:cur.done.move},
-      {id:'cook',label:'Cook',detail:'Cook '+cm.cook+(cm.cook===1?' meal':' meals on different days'),have:cur.have.cook,target:cm.cook,xp:XP.cook,done:cur.done.cook},
-      {id:'stock',label:'Cook from stock',detail:'Cook 2 meals using only what\'s in stock',have:cur.have.stock,target:TARGET.stock,xp:XP.stock,done:cur.done.stock},
-      {id:'care',label:'Kind to self',detail:'Any 2 small acts this week (rest, water, walk, cat time, fresh air, calm, thanks, reach out)',have:cur.have.care,target:TARGET.care,xp:XP.care,done:cur.done.care},
+      {id:'move',label:'Move',detail:'Train or cardio, '+cm.move+' days',have:cur.have.move,target:cm.move,xp:XP.move,done:cur.done.move},
+      {id:'cook',label:'Cook',detail:cm.cook+(cm.cook===1?' meal':' meals, different days'),have:cur.have.cook,target:cm.cook,xp:XP.cook,done:cur.done.cook},
+      {id:'stock',label:'Cook from stock',detail:'Using what you already have',have:cur.have.stock,target:TARGET.stock,xp:XP.stock,done:cur.done.stock},
+      {id:'care',label:'Kind to self',detail:'Tap 2 small acts below',have:cur.have.care,target:TARGET.care,xp:XP.care,done:cur.done.care},
       {id:'clear',label:'Clear bonus',detail:'Finish all three this week',have:cur.clear?1:0,target:1,xp:XP.bonus,done:cur.clear}]}}
 const STORE='levelup-missions-v1',MIN_DINNERS=3;
 function cleanPauses(a){return (Array.isArray(a)?a:[]).filter(p=>p&&okDate(p.from)&&(p.to===null||p.to===undefined||okDate(p.to)&&p.to>=p.from)).map(p=>({from:p.from.slice(0,10),to:p.to?p.to.slice(0,10):null,reason:REASONS.includes(p.reason)?p.reason:'other'})).slice(-40)}
