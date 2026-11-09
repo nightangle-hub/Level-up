@@ -111,6 +111,21 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     assert(/Cucumber salad/.test(t) && !/Miso tofu soup/.test(t), 'Hot day should keep salad only');
     await page.evaluate(() => document.querySelector('[data-action="dinner-reset"]')?.click()); await page.waitForTimeout(300);
   });
+  await ok('recipe page: tags edit in one tap, delete asks inside the app then removes', async () => {
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(e => /Open recipe/.test(e.innerText)).click()); await page.waitForTimeout(600);
+    assert(await page.evaluate(() => document.querySelectorAll('[data-action="recipe-tag"]').length) === 6, 'tag chips missing');
+    const before = await page.evaluate(() => document.querySelectorAll('[data-action="recipe-tag"][aria-pressed="true"]').length);
+    await page.evaluate(() => document.querySelector('[data-action="recipe-tag"][data-mood="spicy"]').click()); await page.waitForTimeout(500);
+    const saved = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')); return s.userRecipes.some(r => Array.isArray(r.moods) && r.moods.includes('spicy')); });
+    assert(saved, 'tag edit not saved');
+    const n0 = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).userRecipes.length);
+    await page.evaluate(() => document.querySelector('[data-action="delete-recipe"]').click()); await page.waitForTimeout(400);
+    assert(await page.evaluate(() => !!document.querySelector('[data-action="delete-recipe-yes"]')), 'no in-app confirm');
+    assert(await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).userRecipes.length) === n0, 'deleted before confirming');
+    await page.evaluate(() => document.querySelector('[data-action="delete-recipe-yes"]').click()); await page.waitForTimeout(600);
+    assert(await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).userRecipes.length) === n0 - 1, 'recipe not deleted');
+    await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click()); await page.waitForTimeout(500);
+  });
   await ok('New recipe shows the three way strip and Back returns to Meals', async () => {
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]').click());
     await page.waitForTimeout(500);
