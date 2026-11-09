@@ -185,6 +185,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     assert(await page.evaluate(() => /\+30 XP for 60/.test(document.querySelector('#moveXp').innerText)), 'XP preview');
     await page.evaluate(() => document.querySelector('#trainingMoveLog button[type=submit]').click()); await page.waitForTimeout(600);
     const r = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')), e = s.trainingLogs.at(-1); let valid = true; try { window.BloomCore.validate(JSON.parse(JSON.stringify(s))); } catch (x) { valid = x.message; } return { e, valid, tab: document.querySelector('.bottom [aria-current="page"]')?.textContent.trim() }; });
+    assert(await page.evaluate(() => document.querySelectorAll('.lu-xpbar').length > 0), 'no XP toast after logging on the Train screen');
     assert.strictEqual(r.e.label, 'Dance'); assert.strictEqual(r.e.mode, 'Other cardio'); assert.strictEqual(r.e.minutes, 60);
     assert.strictEqual(r.valid, true, 'validator rejected label: ' + r.valid); assert(/Train/i.test(r.tab || ''), 'tab was ' + r.tab);
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
