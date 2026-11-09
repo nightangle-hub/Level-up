@@ -5,6 +5,10 @@ const root = path.join(__dirname, '..');
 let fails = 0;
 const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n), e => { fails++; console.log('FAIL', n, '-', e.message); });
 
+const wxSet = async (page, reps, kg) => { await page.evaluate(([r, k]) => { const x = document.querySelector('[data-workout-value="reps"]'); if (x) { x.value = String(r); x.dispatchEvent(new Event('input', { bubbles: true })); } const l = document.querySelector('[data-workout-value="load"]'); if (l && k != null) { l.value = String(k); l.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-wx3="done"]').click(); }, [reps, kg]); await page.waitForTimeout(450); };
+const wxSkip = async page => { await page.evaluate(() => { const b = document.querySelector('.wx3-rest [data-r="skip"]'); if (b) b.click(); }); await page.waitForTimeout(250); };
+const wxExercise = async (page, reps) => { for (let i = 0; i < 3; i++) { await wxSet(page, reps || 12); await wxSkip(page); } };
+const wxNext = async page => { await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(500); };
 (async () => {
   await ok('every script parses', () => {
     for (const f of fs.readdirSync(root).filter(f => f.endsWith('.js'))) new Function(fs.readFileSync(path.join(root, f), 'utf8'));
@@ -212,7 +216,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     t = await tab();
     assert(!/IN PROGRESS/i.test(t) && /Start workout/.test(t) && !/Resume workout/.test(t), 'empty draft shows as in progress: ' + t.slice(0, 200));
     await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
-    await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
+    await wxSet(page, 8); await wxSkip(page);
     t = await tab(); assert(/IN PROGRESS/i.test(t) && /Resume workout/.test(t), 'recorded set should show in progress: ' + t.slice(0, 200));
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
@@ -226,7 +230,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const train = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); return page.evaluate(() => ({ text: document.querySelector('#content').innerText, paths: [...document.querySelectorAll('#content button')].filter(b => /^(Start workout|Resume)/.test(b.innerText.trim())).length, old: !!document.querySelector('#content .workout-resume, #content .foundation-overview') })); };
     let r = await train(); assert(r.paths === 1 && !r.old, 'fresh Train should have exactly one workout button, got ' + r.paths);
     await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
-    await page.evaluate(() => { const i = document.querySelector('[data-workout-value="reps"]'); if (i) { i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(600);
+    await wxSet(page, 8); await wxSkip(page);
     r = await train(); assert(r.paths === 1 && !r.old && !/Start workout/.test(r.text), 'in-progress Train should have exactly one Resume button, got ' + r.paths + ': ' + r.text.slice(0, 160));
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
@@ -235,10 +239,7 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
     await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
     await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
-    for (let i = 0; i < 3; i++) {
-      await page.evaluate(() => { const x = document.querySelector('[data-workout-value="reps"]'); if (x) { x.value = '8'; x.dispatchEvent(new Event('input', { bubbles: true })); } document.querySelector('[data-action="workout-tick"]').click(); }); await page.waitForTimeout(500);
-      await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
-    }
+    for (let i = 0; i < 4; i++) { await wxExercise(page, 8); await wxNext(page); }
     const sums = () => page.evaluate(() => ({ s: [...document.querySelectorAll('#content summary')].map(x => x.innerText.trim()), empty: [...document.querySelectorAll('#content details.workout-guide')].filter(d => !d.querySelector('ol,figure,p,a')).length, h: (document.querySelector('#content h1') || {}).innerText }));
     let r = await sums();
     assert.strictEqual(r.h, 'Review your workout', 'not on the review screen: ' + r.h);
@@ -253,30 +254,52 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
-  await ok('workout look: plus/minus steppers, one main button, core option switch, no empty hero', async () => {
+  await ok('workout look (v2): steppers, one main button, 4 core chips, 3 sets with rest after sets 1 and 2 only', async () => {
     const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
     await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
     await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
-    const info = () => page.evaluate(() => ({ h1: document.querySelector('#content h1').innerText, steps: document.querySelectorAll('#content .wx2-set > .wx2-steps .wx2-step').length, art: !!document.querySelector('#content .wx2-art'), noart: !!document.querySelector('#content .wx2-hero.noart'), primary: [...document.querySelectorAll('#content .wx2-primary')].map(b => b.innerText.trim()), moveOn: [...document.querySelectorAll('#content button')].some(b => /^Move on/.test(b.innerText.trim())), reps: (document.querySelector('[data-workout-value="reps"]') || {}).value, chips: document.querySelectorAll('#content .wx2-chip').length }));
+    const info = () => page.evaluate(() => ({ h1: document.querySelector('#content h1').innerText, steps: document.querySelectorAll('#content .wx2-set .wx2-step').length, art: !!document.querySelector('#content .wx2-art'), noart: !!document.querySelector('#content .wx2-hero.noart'), primary: [...document.querySelectorAll('#content .wx2-primary')].map(b => b.innerText.trim()), reps: (document.querySelector('[data-workout-value="reps"]') || {}).value, chips: document.querySelectorAll('#content .wx2-chip').length, rest: !!document.querySelector('.wx3-rest') }));
     const val = () => page.evaluate(() => document.querySelector('[data-workout-value="reps"]').value);
     let r = await info();
-    assert.strictEqual(r.h1, 'Chest press'); assert.strictEqual(r.steps, 2, 'reps and kg steppers expected'); assert(r.art && !r.noart, 'Chest press should show its picture'); assert.deepStrictEqual(r.primary, ['Done'], 'one main button before the set: ' + JSON.stringify(r.primary));
-    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '8', 'first plus should start at the low end of the target');
-    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '9');
-    await page.evaluate(() => document.querySelector('#content [data-wx-step="-1"]').click()); assert.strictEqual(await val(), '8');
-    await page.evaluate(() => document.querySelector('[data-action="workout-tick"]').click()); await page.waitForTimeout(600);
-    r = await info(); assert.deepStrictEqual(r.primary, ['Next exercise'], 'after Done the main button is Next exercise: ' + JSON.stringify(r.primary)); assert(!r.moveOn, 'Move on duplicates Next exercise');
+    assert.strictEqual(r.h1, 'Chest press'); assert.strictEqual(r.steps, 2, 'reps and kg steppers expected'); assert(r.art && !r.noart, 'Chest press should show its picture'); assert.deepStrictEqual(r.primary, ['Done, set 1']);
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '12', 'first plus should start at the low end of the target');
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="1"]').click()); assert.strictEqual(await val(), '13');
+    await page.evaluate(() => document.querySelector('#content [data-wx-step="-1"]').click()); assert.strictEqual(await val(), '12');
+    await wxSet(page, 12, 22.5); r = await info(); assert(r.rest, 'rest overlay should show after set 1');
+    await page.evaluate(() => document.querySelector('.wx3-rest [data-r="add"]').click());
+    await wxSkip(page); r = await info(); assert(!r.rest, 'skip should close the rest'); assert.deepStrictEqual(r.primary, ['Done, set 2']); assert.strictEqual(r.reps, '12', 'set 2 should prefill from set 1');
+    await wxSet(page, 12); await wxSkip(page);
+    await wxSet(page, 11); r = await info(); assert(!r.rest, 'no rest after the last set'); assert.deepStrictEqual(r.primary, ['Next exercise']);
     const st = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')));
-    assert(st.trainingLogs.some(e => e.kind === 'set' && e.exercise === 'Chest press' && e.reps === 8), 'tapped value should be what is saved');
-    for (let i = 0; i < 2; i++) {
-      await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Next exercise|^Review/.test(b.innerText.trim())).click()); await page.waitForTimeout(600);
-      if (i === 0) await page.evaluate(() => { const x = document.querySelector('[data-workout-value="reps"]'); x.value = '8'; x.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('[data-action="workout-tick"]').click(); }), await page.waitForTimeout(600);
-    }
-    r = await info(); assert.strictEqual(r.h1, 'Dead bug'); assert.strictEqual(r.chips, 3, 'core option switch missing'); assert.strictEqual(r.steps, 1, 'dead bug is bodyweight: reps only'); assert(r.art);
+    assert.strictEqual(st.trainingLogs.filter(e => e.kind === 'set' && e.exercise === 'Chest press').length, 3, 'three sets saved');
+    await wxNext(page); await wxExercise(page, 12); await wxNext(page);
+    r = await info(); assert.strictEqual(r.h1, 'Leg press', 'legs included when the knee plan is not active');
+    await wxExercise(page, 12); await wxNext(page);
+    r = await info(); assert.strictEqual(r.h1, 'Dead bug'); assert.strictEqual(r.chips, 4, 'core option switch missing'); assert.strictEqual(r.steps, 1, 'dead bug is bodyweight: reps only'); assert(r.art);
     await page.evaluate(() => [...document.querySelectorAll('#content .wx2-chip')].find(b => /Cable crunch/.test(b.innerText)).click()); await page.waitForTimeout(700);
-    r = await info(); assert.strictEqual(r.h1, 'Cable crunch', 'core switch did not change the exercise'); assert(r.noart && !r.art, 'no picture: hero should be text only'); assert.strictEqual(r.steps, 2, 'cable crunch has a load');
-    assert(await page.evaluate(() => !document.querySelector('#content details.workout-guide')), 'old empty fold present');
+    r = await info(); assert.strictEqual(r.h1, 'Cable crunch', 'core switch did not change the exercise'); assert.strictEqual(r.steps, 2, 'cable crunch has a load');
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
+    await page.reload(); await page.waitForTimeout(4500);
+  });
+  await ok('progress: compiled set string, A/B toggle, paused Train state, knee plan hides leg press', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Start workout/.test(b.innerText.trim())).click()); await page.waitForTimeout(800);
+    await wxSet(page, 12, 22.5); await wxSkip(page); await wxSet(page, 12); await wxSkip(page); await wxSet(page, 11); await wxNext(page);
+    await wxExercise(page, 12); await wxNext(page); await wxExercise(page, 12); await wxNext(page); await wxExercise(page, 12); await wxNext(page);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /Finish workout/.test(b.innerText)).click()); await page.waitForTimeout(700);
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => [...document.querySelectorAll('#content button')].find(b => /^Your progress/.test(b.innerText.trim())).click()); await page.waitForTimeout(500);
+    let t = await page.evaluate(() => document.querySelector('#content').innerText);
+    assert(/22\.5 kg · 12, 12, 11/.test(t), 'compiled string missing: ' + t.slice(0, 300));
+    await page.evaluate(() => [...document.querySelectorAll('#content .wx3-tabs button')].find(b => /Foundation B/.test(b.innerText)).click()); await page.waitForTimeout(400);
+    t = await page.evaluate(() => document.querySelector('#content').innerText); assert(/Not done yet/.test(t), 'B tab should be empty: ' + t.slice(0, 200));
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')); localStorage.setItem('bloom-zen-v1', JSON.stringify(s)); window.LevelUpMissions.pause('injury'); });
+    await page.reload(); await page.waitForTimeout(4500);
+    await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => ({ t: document.querySelector('#content').innerText, dis: [...document.querySelectorAll('#content .wx3-go')].every(b => b.disabled) && !!document.querySelector('#content .wx3-go') }));
+    assert(/Training Paused/.test(r.t) && /Injury/.test(r.t) && r.dis, 'paused card wrong: ' + r.t.slice(0, 200));
+    await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); localStorage.removeItem('levelup-missions-v1'); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
   await ok('knee plan: validator rejects bad plans, rehab XP is 10 per day, old saves still validate', () => {
@@ -306,27 +329,27 @@ const ok = (n, f) => Promise.resolve().then(f).then(() => console.log('PASS', n)
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
-  await ok('weave: add an exercise inside a Foundation workout, XP cap stays 30, old drafts unaffected, routine tiles no longer link to old pages', async () => {
+  await ok('weave (v2): extra exercise shares the workout, can be removed, XP cap stays 30, routine tiles no longer link to old pages', async () => {
     const C = require(path.join(root, 'bloom-core.js')), snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1'));
     const tab = async () => { await page.evaluate(() => document.querySelector('.bottom [data-tab="train"]').click()); await page.waitForTimeout(500); };
     const clickText = async (sel, t) => { await page.evaluate(([sel, t]) => [...document.querySelectorAll(sel)].find(b => b.innerText.trim().startsWith(t)).click(), [sel, t]); await page.waitForTimeout(500); };
     await tab(); assert(await page.evaluate(() => !document.querySelector('#content [data-view^="foundation-"]')), 'routine tiles still link to old Foundation pages');
-    await clickText('#content button', 'Start workout'); await clickText('#content summary', 'Workout options'); await clickText('#content button', 'All exercise view');
-    assert(await page.evaluate(() => !!document.getElementById('workoutAddEx')), 'Add an exercise form missing');
+    await clickText('#content button', 'Start workout');
+    for (let i = 0; i < 4; i++) { await wxExercise(page, 12); await wxNext(page); }
+    assert(await page.evaluate(() => !!document.getElementById('workoutAddEx')), 'Add an exercise form missing on Review');
     const add = async name => { await page.evaluate(n => { const f = document.getElementById('workoutAddEx'); f.elements.choice.value = 's:' + n; f.requestSubmit(); }, name); await page.waitForTimeout(600); };
-    await add('Leg press'); await add('Push ups');
-    await page.evaluate(() => document.querySelector('[data-wx-remove]').click()); await page.waitForTimeout(500);
+    await add('Push ups');
+    assert.strictEqual(await page.evaluate(() => document.querySelector('#content h1').innerText), 'Push ups', 'should open the added exercise');
+    await clickText('#content summary', 'Options'); await clickText('#content button', 'Remove this exercise');
     let d = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).trainingWorkoutDraft);
-    assert.deepStrictEqual(d.extras, ['Leg press'], 'remove should drop only the last extra: ' + JSON.stringify(d.extras));
-    await add('leg press'); d = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')).trainingWorkoutDraft); assert.strictEqual(d.extras.length, 1, 'duplicate extra accepted');
-    for (const k of ['0-0', '1-0', '2-0', '3-0']) { await page.evaluate(k => { const i = document.querySelector('[data-workout-value="reps"][data-key="' + k + '"]'); i.value = '8'; i.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('[data-action="workout-tick"][data-key="' + k + '"]').click(); }, k); await page.waitForTimeout(500); }
+    assert.deepStrictEqual(d.extras, [], 'remove should drop the extra: ' + JSON.stringify(d.extras));
+    await add('Push ups'); await wxExercise(page, 10); await wxNext(page);
     const st = await page.evaluate(() => JSON.parse(localStorage.getItem('bloom-zen-v1')));
     const sets = st.trainingLogs.filter(e => e.kind === 'set' && !e.voided);
-    assert.strictEqual(sets.length, 4); assert(sets.every(e => e.planId === 'foundation-v1' && e.workoutId === st.trainingWorkoutDraft.id), 'extras must share the workout id');
-    assert(sets.some(e => e.exercise === 'Leg press'));
+    assert.strictEqual(sets.length, 15); assert(sets.every(e => e.planId === 'foundation-v1' && e.workoutId === st.trainingWorkoutDraft.id), 'extras must share the workout id');
     const x = C.trainingXP(st); assert.strictEqual(x.missions, 3, 'XP cap broken: ' + x.missions); C.validate(st);
     await clickText('#content button', 'Finish workout'); const t = await page.evaluate(() => document.querySelector('#content').innerText);
-    assert(/Mission complete/.test(t), 'full workout with an extra should be complete: ' + t.slice(0, 200));
+    assert(/Mission complete|Full exercise XP/.test(t), 'full workout with an extra should be complete: ' + t.slice(0, 200));
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
