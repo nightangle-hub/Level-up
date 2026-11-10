@@ -72,9 +72,20 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     const t = await page.locator('#app').innerText();
     assert(/Sync across devices/i.test(t) || /Settings/i.test(t), 'settings not shown');
   });
-  await ok('bottom bar is Today, Food, Train, Appearance, More (no Week)', async () => {
+  await ok('bottom bar is Today, Food, Train, Looks, More (no Week)', async () => {
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
-    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance', 'More']);
+    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Looks', 'More']);
+  });
+  await ok('Today shows the Level strip and keeps the This week card styling', async () => {
+    await page.evaluate(() => document.querySelector('[data-page="today"]').click());
+    await page.waitForTimeout(700);
+    const o = await page.evaluate(() => { const l = document.querySelector('#luToday .lut-level'); const c = document.querySelector('#luToday .lut-card'); return { strip: l ? l.innerText.replace(/\s+/g, ' ') : '', border: c ? getComputedStyle(c).borderTopWidth : '' }; });
+    assert(/LEVEL 1/i.test(o.strip) && /\/ 100 XP/.test(o.strip), 'strip was ' + o.strip);
+    assert.strictEqual(o.border, '1px', 'This week card lost its border');
+  });
+  await ok('scenes: none below 150 XP, picker lists 20, choice survives reload', async () => {
+    const o = await page.evaluate(() => ({ n: MossScenes.ITEMS.length, low: MossScenes.current(0), at150: MossScenes.current(150).id, top: MossScenes.current(99999).id, pick: (MossScenes.setChoice('s08'), MossScenes.current(400).id), locked: (MossScenes.setChoice('m09'), MossScenes.current(400).id), clean: (MossScenes.setChoice('auto'), MossScenes.choice()) }));
+    assert.strictEqual(o.n, 20); assert.strictEqual(o.low, null); assert.strictEqual(o.at150, 's07'); assert.strictEqual(o.top, 'r06'); assert.strictEqual(o.pick, 's08'); assert.strictEqual(o.locked, 's08'); assert.strictEqual(o.clean, 'auto');
   });
   await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
