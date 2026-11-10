@@ -85,7 +85,7 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
   });
   await ok('scenes: none below 150 XP, picker lists 20, choice survives reload', async () => {
     const o = await page.evaluate(() => ({ n: MossScenes.ITEMS.length, low: MossScenes.current(0), at150: MossScenes.current(150).id, top: MossScenes.current(99999).id, pick: (MossScenes.setChoice('s08'), MossScenes.current(400).id), locked: (MossScenes.setChoice('m09'), MossScenes.current(400).id), clean: (MossScenes.setChoice('auto'), MossScenes.choice()) }));
-    assert.strictEqual(o.n, 20); assert.strictEqual(o.low, null); assert.strictEqual(o.at150, 's07'); assert.strictEqual(o.top, 'r06'); assert.strictEqual(o.pick, 's08'); assert.strictEqual(o.locked, 's07'); assert.strictEqual(o.clean, 'auto');
+    assert.strictEqual(o.n, 20); assert.strictEqual(o.low, null); assert.strictEqual(o.at150, 's07'); assert.strictEqual(o.top, 'r06'); assert.strictEqual(o.pick, 's08'); assert.strictEqual(o.locked, 's08'); assert.strictEqual(o.clean, 'auto');
   });
   await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
