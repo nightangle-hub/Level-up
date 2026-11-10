@@ -14,7 +14,7 @@ const ITEMS=[
  {id:'straw',name:'Straw hat',slot:'hat',xp:2400,layer:'straw',z:'front'},
  {id:'bow',name:'Hair bow',slot:'clip',xp:3200,layer:'bow',z:'front'},
  {id:'bowtie',name:'Bow tie',slot:'neck',xp:4200,layer:'bowtie',z:'front'},
- {id:'sunglasses',name:'Sunglasses',slot:'face',xp:5500,layer:'sunglasses',z:'front'}
+ {id:'sunglasses',name:'Sunglasses',slot:'face',xp:5000,layer:'sunglasses',z:'front'}
 ];
 const MAX=2,byId=new Map(ITEMS.map(i=>[i.id,i]));
 const unlocked=xp=>ITEMS.filter(i=>Number.isFinite(xp)&&xp>=i.xp);
