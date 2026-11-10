@@ -369,6 +369,23 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     await page.evaluate(s => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); localStorage.removeItem('levelup-missions-v1'); }, snap);
     await page.reload(); await page.waitForTimeout(4500);
   });
+  await ok('layered Moss: animated layers, wardrobe unlocks by XP, two at a time, one per spot, survives reload', async () => {
+    const snap = await page.evaluate(() => localStorage.getItem('bloom-zen-v1')), wsnap = await page.evaluate(() => localStorage.getItem('raikiba-wardrobe-v1'));
+    await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bloom-zen-v1')), logs = []; for (let i = 0; i < 12; i++) { const d = new Date(Date.now() - 864e5 * i); logs.push({ id: 'm' + i, kind: 'cardio', mode: 'Other cardio', minutes: 90, date: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'), createdAt: new Date().toISOString() }); } s.trainingLogs = logs; localStorage.setItem('bloom-zen-v1', JSON.stringify(s)); localStorage.removeItem('raikiba-wardrobe-v1'); });
+    await page.reload(); await page.waitForTimeout(3500);
+    await page.evaluate(() => { const o = [...document.querySelectorAll('button')].find(b => /tap to continue/i.test(b.innerText) || b.className.includes('levelup')); if (o) o.click(); });
+    assert(await page.evaluate(() => document.querySelectorAll('#bloomCompanion .moss-l img').length >= 7 && !!document.querySelector('#bloomCompanion .moss-eyeL')), 'buddy is layered');
+    await page.evaluate(() => document.querySelector('[data-buddy=profile]').click()); await page.waitForTimeout(800);
+    const g = () => page.evaluate(() => ({ on: [...document.querySelectorAll('.wd[aria-pressed=true]')].map(b => b.dataset.mossItem), open: document.querySelectorAll('.wd:not([disabled])').length, acc: document.querySelectorAll('#bloomCompanion .moss-acc').length, saved: JSON.parse(localStorage.getItem('raikiba-wardrobe-v1') || '{}').equipped }));
+    let r = await g(); assert.strictEqual(r.open, 3, 'unlocked at 360 XP: round glasses, flower crown, scarf; got ' + r.open);
+    const tap = id => page.evaluate(i => document.querySelector('[data-moss-item="' + i + '"]').click(), id).then(() => page.waitForTimeout(300));
+    await tap('glasses_round'); await tap('crown'); r = await g(); assert.deepStrictEqual(r.on.sort(), ['crown', 'glasses_round'], 'two worn'); assert.strictEqual(r.acc, 2, 'buddy shows both');
+    await tap('scarf'); r = await g(); assert.strictEqual(r.on.length, 2, 'never more than two'); assert(r.on.includes('scarf'), 'new one is worn');
+    await tap('scarf'); r = await g(); assert(!r.on.includes('scarf'), 'tap again removes');
+    await page.reload(); await page.waitForTimeout(3500); r = await g(); assert.strictEqual(r.saved.length, r.acc, 'worn items persist after reload');
+    await page.evaluate(([s, w]) => { s === null ? localStorage.removeItem('bloom-zen-v1') : localStorage.setItem('bloom-zen-v1', s); w === null ? localStorage.removeItem('raikiba-wardrobe-v1') : localStorage.setItem('raikiba-wardrobe-v1', w); }, [snap, wsnap]);
+    await page.reload(); await page.waitForTimeout(3500);
+  });
   await ok('storage meter is read only and never errors', async () => {
     const r = await page.evaluate(() => { const k = 'bloom-zen-v1'; return { has: !!localStorage.getItem(k), len: (localStorage.getItem(k) || '').length }; });
     assert(r.len < 2 * 1024 * 1024);
