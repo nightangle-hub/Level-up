@@ -100,17 +100,18 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     assert(o.hasOffline, 'offline mode section missing on Today');
     assert(!o.hasDinnerCard, 'dinner card should have moved off Today');
   });
-  await ok('Food tab is the Pick a meal screen with Hot/Cold shortcuts', async () => {
+  await ok('Food tab is the Pick a meal screen with 6 mood chips', async () => {
     await page.evaluate(() => document.querySelector('nav.bottom [data-view="dinner"]')?.click());
     await page.waitForTimeout(600);
     const o = await page.evaluate(() => {
-      const presets = [...document.querySelectorAll('[data-action="mood-preset"]')].map(b => b.textContent.trim());
-      return { hot: presets.some(t => /Hot day/i.test(t)), cold: presets.some(t => /Cold day/i.test(t)), heading: !!document.querySelector('#content h1') && /What do you feel like/i.test(document.querySelector('#content h1').textContent) };
+      const chips = [...document.querySelectorAll('[data-action="mood"]')].map(b => b.dataset.mood);
+      return { chips, heading: !!document.querySelector('#content h1') && /What do you feel like/i.test(document.querySelector('#content h1').textContent) };
     });
-    assert(o.hot && o.cold, 'Hot/Cold day shortcuts missing');
+    assert(o.chips.length === 6, '6 mood chips expected, got ' + o.chips.length);
+    assert(['quick','light','spicy','soupy','comforting','high-protein'].every(m => o.chips.includes(m)), 'Missing mood chips: ' + o.chips.join(','));
     assert(o.heading, 'Pick a meal title not "What do you feel like?"');
   });
-  await ok('Food shows saved recipes even with no stock, Cold day filters, no false Nothing matches', async () => {
+  await ok('Food shows saved recipes even with no stock, mood chip filters, no false Nothing matches', async () => {
     const R = (id, title, ing) => ({ id, title, ingredients: ing, steps: ['Cook.'], servings: '2', notes: '', createdAt: new Date().toISOString() });
     await page.evaluate(rs => localStorage.setItem('bloom-zen-v1', JSON.stringify({ schemaVersion: 3, theme: 'light', page: 'today', cookedMeals: [], stockItems: [], userRecipes: rs })), [R('r1', 'Miso tofu soup', ['1 tbsp miso', '200 g tofu', '2 cups water', '1 spring onion', '1 tsp sesame oil', '1 tsp soy sauce']), R('r2', 'Cucumber salad', ['2 cucumbers', '1 tbsp rice vinegar', '1 tsp sesame oil', '1 tsp chilli oil', '1 tsp sugar', '1 tsp salt'])]);
     await page.reload(); await page.waitForTimeout(1500);
@@ -118,12 +119,13 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     let t = await page.evaluate(() => document.querySelector('#content').innerText);
     assert(/Miso tofu soup/.test(t) && /Cucumber salad/.test(t), 'saved recipes hidden');
     assert(!/Nothing matches/.test(t), 'false Nothing matches');
-    await page.evaluate(() => document.querySelector('[data-action="mood-preset"][data-day="cold"]').click()); await page.waitForTimeout(500);
+    await page.evaluate(() => document.querySelector('[data-action="mood"][data-mood="soupy"]').click()); await page.waitForTimeout(500);
     t = await page.evaluate(() => document.querySelector('#content').innerText);
-    assert(/Miso tofu soup/.test(t) && !/Cucumber salad/.test(t), 'Cold day should keep soup only');
-    await page.evaluate(() => document.querySelector('[data-action="mood-preset"][data-day="hot"]').click()); await page.waitForTimeout(500);
+    assert(/Miso tofu soup/.test(t) && !/Cucumber salad/.test(t), 'Soupy chip should keep soup only');
+    await page.evaluate(() => document.querySelector('[data-action="mood"][data-mood="soupy"]').click()); await page.waitForTimeout(300);
+    await page.evaluate(() => document.querySelector('[data-action="mood"][data-mood="light"]').click()); await page.waitForTimeout(500);
     t = await page.evaluate(() => document.querySelector('#content').innerText);
-    assert(/Cucumber salad/.test(t) && !/Miso tofu soup/.test(t), 'Hot day should keep salad only');
+    assert(/Cucumber salad/.test(t) && !/Miso tofu soup/.test(t), 'Light chip should keep salad only');
     await page.evaluate(() => document.querySelector('[data-action="dinner-reset"]')?.click()); await page.waitForTimeout(300);
   });
   await ok('recipe page: tags edit in one tap, delete asks inside the app then removes', async () => {
