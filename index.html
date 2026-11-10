@@ -581,6 +581,14 @@ h1,h2,h3{font-family:var(--serif)}.app.home-screen .concept-feature{display:none
 @media(prefers-reduced-motion:reduce){#luToday .lut-quests>summary::after{transition:none}}
 @media(max-width:360px){.app .care-chip{padding:10px 8px;gap:6px;font-size:13px}.app .care-chip .care-glyph{width:16px;font-size:13px}}
 .app .wx3-week .wx3-week-cols{align-items:start}.app .wx3-week .capture-note{margin:12px 0 0}
+#bloomCompanion .buddy-bubble{border:1px solid var(--buddy-border);background:var(--buddy-bg);box-shadow:0 3px 10px #0000001a;border-radius:12px;padding:3px 10px 4px;font-size:16px;line-height:1.2;min-width:0;left:50%;right:auto;bottom:calc(100% + 2px);transform:translateX(-50%);animation:buddy-bub .25s ease-out both}
+#bloomCompanion .buddy-bubble::after{content:"";position:absolute;left:50%;bottom:-5px;width:8px;height:8px;margin-left:-4px;background:var(--buddy-bg);border-right:1px solid var(--buddy-border);border-bottom:1px solid var(--buddy-border);transform:rotate(45deg)}
+#bloomCompanion.buddy-bubble-side .buddy-bubble{left:auto;right:calc(100% + 4px);bottom:auto;top:10px;transform:none}
+#bloomCompanion.buddy-bubble-side .buddy-bubble::after{left:auto;right:-5px;bottom:auto;top:50%;margin:-4px 0 0;border:0;border-top:1px solid var(--buddy-border);border-right:1px solid var(--buddy-border)}
+#bloomCompanion.buddy-bubble-side.buddy-left .buddy-bubble{right:auto;left:calc(100% + 4px)}
+#bloomCompanion.buddy-bubble-side.buddy-left .buddy-bubble::after{right:auto;left:-5px;border:0;border-left:1px solid var(--buddy-border);border-bottom:1px solid var(--buddy-border)}
+@keyframes buddy-bub{from{opacity:0;margin-top:4px}to{opacity:1;margin-top:0}}
+@media(prefers-reduced-motion:reduce){#bloomCompanion .buddy-bubble{animation:none}}
 #luToday .lut-quests ul{padding-bottom:6px}#luToday .lut-weekly{display:block;margin:2px 0 12px}
 .lu-xpbar{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top));transform:translate(-50%,-90px);width:min(358px,calc(100vw - 32px));z-index:60;background:#27402f;color:#e9eee6;border-radius:16px;padding:11px 14px 12px;font-size:13px;box-shadow:0 10px 28px #1f242440;pointer-events:none;animation:luDrop 2.8s .05s both}
 .lu-xpbar .t{height:5px;border-radius:3px;background:#3d5a45;margin-top:8px;overflow:hidden}.lu-xpbar .t i{display:block;height:100%;background:#e2b062;border-radius:3px;transform-origin:left;animation:luFill .9s .5s both}
@@ -1218,7 +1226,7 @@ app.addEventListener('click',e=>{const b=e.target.closest('[data-action="trainin
  function updateFace(){const hour=new Date().getHours(),asleep=(hour>=22||hour<8)&&Date.now()>wakeUntil;root.classList.toggle('buddy-asleep',asleep);sleepMark.hidden=!asleep;const frame=Date.now()<happyUntil?'happy':asleep?'sleep':'awake',m=root.querySelector('.moss');if(m&&m.dataset.mood!==frame)m.dataset.mood=frame}
  function apply(){root.classList.toggle('buddy-dark',app.classList.contains('dark'));root.hidden=prefs.hidden;root.classList.toggle('buddy-mini',prefs.mini);root.classList.toggle('buddy-still',!prefs.motion||reduce.matches);motion.checked=prefs.motion;handle.setAttribute('aria-label',prefs.mini?'Restore companion':'Pet companion; hold for controls. Drag to play, release to keep its position.');updateFace();place()}
  function show(){prefs.hidden=false;prefs.mini=false;persist();apply();handle.focus()}
- function pet(){close();happyUntil=Date.now()+1800;wakeUntil=Date.now()+10000;updateFace();bubble.textContent=['♥','✧','♪'][reaction++%3];bubble.hidden=false;root.classList.remove('buddy-celebrate');void root.offsetWidth;root.classList.add('buddy-celebrate');clearTimeout(timer);timer=setTimeout(()=>{bubble.hidden=true;root.classList.remove('buddy-celebrate');updateFace()},2000);setTimeout(updateFace,10100)}
+ function pet(){close();happyUntil=Date.now()+1800;wakeUntil=Date.now()+10000;updateFace();bubble.textContent=['♥','✧','♪'][reaction++%3];root.classList.toggle('buddy-bubble-side',root.getBoundingClientRect().top<46);bubble.hidden=false;root.classList.remove('buddy-celebrate');void root.offsetWidth;root.classList.add('buddy-celebrate');clearTimeout(timer);timer=setTimeout(()=>{bubble.hidden=true;root.classList.remove('buddy-celebrate');updateFace()},2000);setTimeout(updateFace,10100)}
  handle.addEventListener('click',()=>{if(suppressClick){suppressClick=false;return}if(prefs.mini){prefs.mini=false;persist();apply();return}pet()});
  function openControls(){show();panel.hidden=false;place();panel.querySelector('button').focus()}
  document.addEventListener('levelup-companion-controls',openControls);
