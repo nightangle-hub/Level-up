@@ -72,9 +72,9 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     const t = await page.locator('#app').innerText();
     assert(/Sync across devices/i.test(t) || /Settings/i.test(t), 'settings not shown');
   });
-  await ok('bottom bar is Today, Food, Train, Appearance (no Week)', async () => {
+  await ok('bottom bar is Today, Food, Train, Appearance, More (no Week)', async () => {
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
-    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance']);
+    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance', 'More']);
   });
   await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
