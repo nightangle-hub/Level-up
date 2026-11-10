@@ -72,9 +72,36 @@ const wxNext = async page => { await page.evaluate(() => [...document.querySelec
     const t = await page.locator('#app').innerText();
     assert(/Sync across devices/i.test(t) || /Settings/i.test(t), 'settings not shown');
   });
-  await ok('bottom bar is Today, Food, Train, Appearance, More (no Week)', async () => {
+  await ok('bottom bar is Today, Food, Train, Looks (no Week, no More tab)', async () => {
     const n = await page.evaluate(() => [...document.querySelectorAll('.bottom button')].map(b => b.innerText.trim().replace(/\s+/g, ' ')));
-    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Appearance', 'More']);
+    assert.deepStrictEqual(n.map(x => x.replace(/^\S+\s/, '')), ['Today', 'Food', 'Train', 'Looks']);
+  });
+  await ok('header menu: opens, lists four items, Escape closes, Light or dark toggles, Settings opens', async () => {
+    await page.evaluate(() => document.querySelector('[data-page="today"]').click());
+    await page.waitForTimeout(400);
+    await page.click('#headerMenuBtn');
+    const items = await page.evaluate(() => [...document.querySelectorAll('#headerMenu button')].map(b => b.innerText.trim()));
+    assert.deepStrictEqual(items, ['Companion & rewards', 'Settings & backups', 'Food reflection', 'Light or dark']);
+    assert.strictEqual(await page.evaluate(() => document.getElementById('headerMenu').hidden), false);
+    await page.keyboard.press('Escape');
+    assert.strictEqual(await page.evaluate(() => document.getElementById('headerMenu').hidden), true);
+    await page.click('#headerMenuBtn');
+    const was = await page.evaluate(() => document.getElementById('app').classList.contains('dark'));
+    await page.click('#headerMenu [data-menu-theme]');
+    await page.waitForTimeout(300);
+    assert.notStrictEqual(await page.evaluate(() => document.getElementById('app').classList.contains('dark')), was);
+    assert.strictEqual(await page.evaluate(() => document.getElementById('headerMenu').hidden), true);
+    await page.click('#headerMenuBtn');
+    await page.click('#headerMenu [data-view="settings"]');
+    await page.waitForTimeout(700);
+    assert(/Settings|Sync across devices/i.test(await page.locator('#app').innerText()), 'settings not opened from menu');
+    await page.evaluate(() => document.querySelector('[data-page="today"]').click());
+    await page.waitForTimeout(400);
+  });
+  await ok('Today shows the Level strip and keeps the This week card styling', async () => {
+    const o = await page.evaluate(() => { const l = document.querySelector('#luToday .lut-level'); const c = document.querySelector('#luToday .lut-card'); return { strip: l ? l.innerText.replace(/\s+/g, ' ') : '', border: c ? getComputedStyle(c).borderTopWidth : '' }; });
+    assert(/LEVEL 1/i.test(o.strip) && /\/ 100 XP/.test(o.strip), 'strip was ' + o.strip);
+    assert.strictEqual(o.border, '1px', 'This week card lost its border');
   });
   await ok('Today shows Kind to self chips and offline access, no dinner card', async () => {
     await page.evaluate(() => document.querySelector('[data-page="today"]').click());
