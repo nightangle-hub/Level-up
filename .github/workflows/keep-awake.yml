@@ -1,0 +1,22 @@
+# Keeps the free Supabase projects (RaiKiba and Malaysia trip) from pausing after 7 quiet days.
+# Runs Monday and Thursday. Uses only public publishable keys; reads nothing private.
+name: Keep Supabase awake
+on:
+  schedule:
+    - cron: '17 21 * * 1,4'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: RaiKiba
+        run: |
+          curl -sS -o /dev/null -w "raikiba %{http_code}\n" \
+            "https://rogzuvlaoqjqhwnqoipk.supabase.co/rest/v1/saves?select=user_id&limit=1" \
+            -H "apikey: sb_publishable_y0DB7IhtAvpHSGxtI3YKUA_MGAW0gTD"
+      - name: Malaysia trip
+        run: |
+          curl -sS -o /dev/null -w "trip %{http_code}\n" -X POST \
+            "https://yadnkhqsjoakaqdyqnjk.supabase.co/rest/v1/rpc/trip_get_data" \
+            -H "apikey: sb_publishable_y9sedG1jC2rMVQhAbe2mgQ_HWFMWFYw" \
+            -H "Content-Type: application/json" -d '{"p_code":"ping"}'
