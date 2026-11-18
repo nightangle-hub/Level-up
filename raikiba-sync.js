@@ -11,7 +11,8 @@
   // Only these browser keys are synced. Photos, companion look and splash day stay on each device.
   const TRACKED = [
     'bloom-zen-v1', 'levelup-mealplan-v1', 'levelup-missions-v1', 'levelup-prizes-v1',
-    'levelup-prize-preferences-v1', 'bloom-training-xp', 'levelup-appearance-routine-v1', 'lu-appearance-v2'
+    'levelup-prize-preferences-v1', 'bloom-training-xp', 'levelup-appearance-routine-v1', 'lu-appearance-v2',
+    'levelup-appearance-routine-v2', 'raikiba-wardrobe-v1', 'raikiba-scene-v1'
   ];
   const META_KEY = 'raikiba-sync-meta-v1';
   let applying = false, busy = false, queued = false, timer = null;
@@ -107,6 +108,28 @@
     meta.session = { access_token: r.json.access_token, refresh_token: r.json.refresh_token, expires_at: Math.floor(Date.now() / 1000) + (r.json.expires_in || 3600), email: s.email };
     writeMeta(meta);
   }
+
+  // Private media and notes live in your private storage, readable only when signed in.
+  const signed = {};
+  async function privateUrls(paths) {
+    const now = Date.now(), out = {}, need = [];
+    for (const p of paths) { const c = signed[p]; if (c && c.until > now) out[p] = c.url; else need.push(p); }
+    if (!need.length) return out;
+    if (!meta.session) return out;
+    await ensureToken();
+    for (let i = 0; i < need.length; i += 100) {
+      const r = await http('/storage/v1/object/sign/private', { method: 'POST', body: { expiresIn: 3600, paths: need.slice(i, i + 100) } });
+      if (!r.ok || !Array.isArray(r.json)) continue;
+      for (const x of r.json) if (x && x.signedURL && !x.error) { const url = CFG.url + '/storage/v1' + x.signedURL; signed[x.path] = { url, until: now + 50 * 60000 }; out[x.path] = url; }
+    }
+    return out;
+  }
+  async function privateJson(path) {
+    if (!meta.session) return null;
+    await ensureToken();
+    const r = await http('/storage/v1/object/authenticated/private/' + path);
+    return r.ok ? r.json : null;
+  }
   async function getRow() {
     const r = await http('/rest/v1/saves?select=envelope,version,updated_at,updated_by');
     if (!r.ok) { const e = new Error('http-' + r.status); e.status = r.status; throw e; }
@@ -201,7 +224,7 @@
       const r = await http('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } }, false);
       if (r.ok && r.json && r.json.access_token) {
         meta.session = { access_token: r.json.access_token, refresh_token: r.json.refresh_token, expires_at: Math.floor(Date.now() / 1000) + (r.json.expires_in || 3600), email };
-        writeMeta(meta); ui.password = ''; ui.working = false; await sync('signin'); return;
+        writeMeta(meta); ui.password = ''; ui.working = false; try { root.document.dispatchEvent(new root.CustomEvent('raikiba-signed-in')); } catch (e) {} await sync('signin'); return;
       }
       ui.message = r.status === 429 ? 'Too many tries. Wait a few minutes.' : 'Email or password did not match.';
     } catch (e) { ui.message = 'No connection. Try again when you are online.'; }
@@ -329,6 +352,6 @@
     if (meta.session) sync('open'); else setStatus('signedout');
   }
 
-  root.RaiKibaSync = { init, sync, snapshot, hashOf, TRACKED, _state: () => ({ ui, meta }), _signIn: signIn, _useCloud: useCloudCopy, _keepThis: keepThisCopy, _versions: loadVersions, _restore: restoreVersion, _touch: touch };
+  root.RaiKibaSync = { init, sync, privateUrls, privateJson, signedIn: () => !!meta.session, snapshot, hashOf, TRACKED, _state: () => ({ ui, meta }), _signIn: signIn, _useCloud: useCloudCopy, _keepThis: keepThisCopy, _versions: loadVersions, _restore: restoreVersion, _touch: touch };
   if (root.document && root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', init); else init();
 })(typeof window !== 'undefined' ? window : globalThis);
